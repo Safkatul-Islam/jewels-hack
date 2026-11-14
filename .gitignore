@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Retired P4 preview artifacts retained locally after Next.js integration
+/tools/p4/
