@@ -155,8 +155,19 @@ edit and was not rerun after it. In the dev server, generated markers were detec
 `/plan` from plan score 57.9 to 39.7 using the stored 157 ms run (no rerun on arrival).
 The embedded preview reported `document.hidden`, throttling frames to about 1 fps, so
 Confirm was triggered by script right after a frame; the 500 ms freshness gate refused
-a normal click there, as designed. Local image/video input, camera switching, the
-angled calibration and JSON export were not rechecked after the merge.
+a normal click there, as designed. Camera switching, the angled calibration and the
+exported JSON contents were not rechecked after the merge.
+
+Local file input was then exercised in the dev server with files made in the page from
+the generated frame (1280x720 PNG, 960x540 PNG, looping WebM) and fed to the real file
+input: each detected 4 markers and enabled Confirm; a normal Confirm click from an image
+ran the simulation. Text and undecodable files gave clear errors and left capture off.
+Switching test/image/video in every order kept the last selection, cleared the video
+element and revoked the previous object URL, as did Stop. One bug was fixed: loading a
+source with different frame dimensions showed "Frame dimensions changed. Recalibrate"
+although the new source was valid; size memory now resets per source. Chrome refuses
+`play()` for a video file while the page is in the background, which surfaces as a load
+error; retry with the tab visible. No real camera recording or phone footage was used.
 
 Browser checks cover generated detection/movement, R3F rendering, Confirm and shared
 planner navigation, capture reset on route departure, and calibration/scenario controls.
