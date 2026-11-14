@@ -1,13 +1,16 @@
 # Table mode — P4's playbook
 
-The ArUco table is the showstopper and the riskiest thing in the build. It is also the
-only piece with a hard kill gate (T+3:30, see `03-WORKPLAN.md`). Read this before starting.
+The ArUco table is the showstopper and the riskiest thing in the build. It's also the only
+piece with a hard kill gate (T+3:30, see `03-WORKPLAN.md`). Read this before starting.
 
 **Order of work.** Camera feed → detection → calibration → pieces move on screen → *then*
 3D. Each step is demonstrable on its own. If you run out of time at step four you still
 have a real demo; if you start with 3D you have nothing until the very end.
 
 ## Printing the markers
+
+One printed set works for **every scenario** — the calibration reads true distances from
+whichever scenario is loaded, so you never reprint.
 
 | | |
 |---|---|
@@ -18,32 +21,33 @@ have a real demo; if you start with 3D you have nothing until the very end.
 | Mounting | Glue to cardboard or foam core. Paper curls, and a curled marker is a warped square. |
 | Labels | Write the marker ID and what it is **on the back** in marker pen. At hour five nobody remembers that 12 is the vendor village. |
 
-IDs come from `MARKER_MAP` in `02-CONTRACTS.md`: `0` venue, `1` station, `10`–`16` the
-placeable pieces. Print **two spares** of markers 0 and 1 — if a calibration marker gets
-coffee on it the whole table stops working.
+IDs come from `MARKER_MAP` in `02-CONTRACTS.md`: `0` venue, `1` primary arrival anchor,
+`10`–`16` the placeable pieces. Print **two spares of 0 and 1** — if a calibration marker
+gets coffee on it, the whole table stops working.
 
-## Calibration — do not hard-code a homography
+## Calibration — derive it, never hard-code it
 
-Markers `0` (Rose Bowl) and `1` (Memorial Park Station) are the calibration pair. Their
-true separation is known from the fixture, about 2,900 m. Every frame:
+Markers `0` (venue) and `1` (primary anchor) are the calibration pair. Put them on the table
+first. **Their true separation comes from the loaded scenario, not from a constant** — that
+single choice is what makes the same printed markers work for any venue. Each frame:
 
 ```
-scale    = 2900 / pixelDistance(marker0, marker1)
-rotation = angle(marker0 → marker1)  −  angle(venue → station in world coords)
+trueM    = distance(world.venue.pos, world.anchors[0].pos)
+scale    = trueM / pixelDistance(marker0, marker1)
+rotation = angle(marker0 → marker1)  −  angle(venue → anchors[0] in world coords)
 origin   = marker0.center
 ```
 
-Then every other marker's pixel centre runs through that transform to become world metres.
+Every other marker's pixel centre then runs through that transform to become world metres.
 
-This is about fifteen lines and it means **the table can be any size, at any angle, with
-the camera anywhere.** It removes the single largest source of demo failure — a
-pre-calibrated setup that breaks the moment someone nudges the table. Derive it every
-frame, from the markers themselves.
+This means **the table can be any size, at any angle, with the camera anywhere, for any
+scenario.** It removes the single largest source of demo failure — a pre-calibrated setup
+that breaks the moment someone nudges the table. About fifteen lines. Derive it every frame.
 
 ## Smoothing — the step everyone skips
 
-Raw per-frame ArUco output jitters by several pixels, which at table scale is tens of
-world metres. Un-smoothed, that re-triggers the simulation continuously and looks broken.
+Raw per-frame ArUco output jitters by several pixels, which at table scale is tens of world
+metres. Un-smoothed, that re-triggers the simulation continuously and looks broken.
 
 - Rolling average of each marker's position over ~5 frames
 - A marker that vanishes for under ~500 ms keeps its last known position
@@ -76,21 +80,23 @@ Six hours of modelling buys about four seconds of demo. Use CC0 assets or primit
 
 Load `.glb` through `@react-three/drei`'s `useGLTF`. **Start with extruded boxes** — a
 colour-coded box per piece kind reads perfectly well on a marker, and swapping in a `.glb`
-later is a one-line change. The Rose Bowl itself: a scaled oval ring, which is more
-recognisable than any detailed model at that size anyway.
+later is a one-line change.
+
+For the venue marker, a generic scaled oval ring or a simple stadium bowl is better than a
+model of one specific stadium — it's more recognisable at that size, and it stays honest
+about the tool being venue-agnostic.
 
 ### Two routes for the overlay, in order of safety
 
 **Safe — top-down orthographic.** You already have scale, rotation and origin from
-calibration. Render the video as a plain `<video>` element, put a transparent
-`<canvas>` over it, and use an `OrthographicCamera` looking straight down with the same
-transform. Models sit flat on the markers. Takes maybe 30 minutes and cannot really fail.
+calibration. Render the video as a plain `<video>` element, put a transparent `<canvas>`
+over it, and use an `OrthographicCamera` looking straight down with the same transform.
+Models sit flat on the markers. Maybe 30 minutes, and it can't really fail.
 
 **Impressive — real pose.** js-aruco ships a POSIT pose estimator that returns per-marker
-rotation and translation, which you can drive a perspective three.js camera with, so models
-stand upright on the table in correct perspective. Check the library's pose module API
-before committing — budget an hour, and only attempt it after the orthographic version
-works and is committed.
+rotation and translation, which can drive a perspective three.js camera so models stand
+upright in correct perspective. Check the library's pose module API before committing —
+budget an hour, and only attempt it after the orthographic version works and is committed.
 
 Do the safe one first, commit it, then try the other. Never the reverse.
 

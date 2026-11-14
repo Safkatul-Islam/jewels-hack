@@ -1,25 +1,35 @@
 # ARROYO
 
-**A tabletop simulator for the Rose Bowl's last mile, LA28.**
+**A planning sandbox for the last mile around any major venue.**
 
-In 2028, Olympic football semifinals and finals come to the Rose Bowl — about 90,000
-spectators per match, to a stadium with no rail station. Metro's route is A Line →
-Memorial Park Station → walk → shuttle. That last mile runs through the Arroyo Seco's
-residential streets and past Old Pasadena's small businesses.
+A stadium holds 60–90,000 people. They arrive in about three hours and leave in about one.
+Between the venue and wherever they came from — a rail station, a parking lot, a freeway
+exit — there's a corridor of a mile or two. **That corridor is somebody's neighbourhood,**
+and it's where the small businesses are.
 
-ARROYO is a planning sandbox for that corridor. The venue is fixed; the last mile is the
-variable. Place shuttle hubs, park-and-rides, vendor villages and road closures — the
-network regenerates, an agent simulation runs spectators, residents and businesses
-through it, and you see what your plan does to each of them.
+Cities plan the venue. Cities plan the transit line. Almost nobody plans the last mile for
+everyone who uses it at once.
+
+ARROYO is a sandbox for that corridor. The venue and the arrival anchors are fixed; you
+place the shuttle hubs, park-and-rides, vendor villages, pedestrian corridors and road
+closures between them. The network regenerates, an agent simulation runs spectators,
+residents and businesses through it, and you see what your plan does to each of them.
 
 There is no optimal plan. There's only whose plan it is. ARROYO makes the tradeoff visible.
+
+### Any venue
+
+A scenario is just a JSON file — venue, arrival anchors, network, businesses, blocks,
+personas. Nothing in the engine knows which city it's in. We ship the **Rose Bowl (LA28
+Olympic football)** as the default, because a 90,000-seat venue with no rail station is an
+unusually sharp example of the general problem. Swap the file and the whole world changes.
 
 ## Docs — read in order
 
 | | | |
 |---|---|---|
 | [00-PRD.md](docs/00-PRD.md) | Product | What we're building, scope tiers, metric definitions, demo script |
-| [01-ARCHITECTURE.md](docs/01-ARCHITECTURE.md) | Everyone | Stack, data flow, file ownership, performance budget |
+| [01-ARCHITECTURE.md](docs/01-ARCHITECTURE.md) | Everyone | Stack, scenario model, data flow, file ownership, performance budget |
 | [02-CONTRACTS.md](docs/02-CONTRACTS.md) | Everyone | **The frozen types. Copy into `lib/sim/types.ts` first.** |
 | [03-WORKPLAN.md](docs/03-WORKPLAN.md) | Everyone | 4-person split, hour-by-hour timeline, cut list |
 | [04-TABLE-MODE.md](docs/04-TABLE-MODE.md) | P4 | ArUco markers, calibration, 3D assets, fallbacks |
