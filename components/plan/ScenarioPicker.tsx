@@ -30,7 +30,10 @@ export function ScenarioPicker() {
       }}
       disabled={loading || SCENARIOS.length < 1}
     >
-      <SelectTrigger className="w-[230px]" size="sm">
+      <SelectTrigger
+        className="w-[210px] rounded-[2px] border-[var(--night-hairline)] bg-transparent font-mono text-[10px] tracking-[0.12em] uppercase"
+        size="sm"
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

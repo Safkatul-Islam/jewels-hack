@@ -232,7 +232,8 @@
    follows the normal light/dark tokens above.
    ============================================================ */
 
-.night {
+.night,
+.console {
   --ink: oklch(0.158 0.014 252);
   --ink-raise: oklch(0.213 0.016 252);
   --night-grid: oklch(0.238 0.013 252);
@@ -250,6 +251,15 @@
   --pop-business: oklch(0.800 0.150 68);
 
   color-scheme: dark;
+}
+
+/* `.night` paints itself; `.console` only carries the tokens.
+   /plan needs the palette but must NOT have a blanket background and text
+   colour forced onto it — the canvas, the voice dock and the shadcn controls
+   in the middle belong to other people, and they already theme themselves
+   from the `.dark` tokens. /plan turns `.dark` on and then paints only its
+   own chrome with the night tokens. */
+.night {
   background: var(--ink);
   color: var(--bone);
 }

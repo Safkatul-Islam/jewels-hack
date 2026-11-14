@@ -9,17 +9,29 @@
 // P2: replace <DashboardSlot /> with your <Dashboard /> and delete the slot.
 // P3: `runPlan` below is the single integration point for the engine. It is
 //     called once per committed edit — on drop, not during drag.
+//
+// ---- on the look ----
+//
+// The page is in the same instrument language as `/`: ink surfaces, hairline
+// rules, 10px wide-tracked mono labels, one accent the user picks.
+//
+// It gets there by turning `.dark` ON rather than by restyling anything in the
+// middle. The project already ships a full dark palette — canvas, roads,
+// pieces, shadcn controls all have `.dark` values — and /plan simply never
+// switched it on. So the canvas, the piece layers and the voice dock theme
+// themselves, and NONE of those files had to be touched. `.console` then adds
+// the night tokens on top, for this page's own chrome only.
 
 import { useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { ConversationProvider } from '@elevenlabs/react';
+import { AccentProvider } from '@/components/home/AccentProvider';
+import { AccentSelector } from '@/components/home/AccentSelector';
 import { PieceInspector } from '@/components/plan/PieceInspector';
 import { VoiceDock } from '@/components/voice/VoiceDock';
 import { PiecePalette } from '@/components/plan/PiecePalette';
 import { PlanCanvas } from '@/components/plan/PlanCanvas';
 import { ScenarioPicker } from '@/components/plan/ScenarioPicker';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { buildNetwork } from '@/lib/sim/network';
 import { simulate } from '@/lib/sim/simulate';
 import { usePlanStore } from '@/lib/store';
@@ -71,65 +83,86 @@ export default function PlanPage() {
     // The provider holds the ElevenLabs session and the registry the advisor's
     // client tools register into. It opens no connection until VoiceDock calls
     // startSession, so the page costs nothing extra until someone asks to talk.
-    <ConversationProvider>
-    <main className="flex h-dvh flex-col overflow-hidden">
-      <header className="flex shrink-0 items-center gap-3 border-b px-4 py-2.5">
-        <Link href="/" className="text-sm font-semibold tracking-tight">
-          ARROYO
-        </Link>
-        <Separator orientation="vertical" className="h-5" />
-        <ScenarioPicker />
-        {world && (
-          <span className="hidden truncate text-xs text-muted-foreground md:block">
-            {world.scenario.event}
-          </span>
-        )}
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {pieceCount} {pieceCount === 1 ? 'piece' : 'pieces'}
-            {result && ` · sim ${result.runtimeMs} ms`}
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-xs"
-            disabled={pieceCount === 0}
-            onClick={() => {
-              clearPieces();
-              runPlan();
-            }}
-          >
-            Clear plan
-          </Button>
-        </div>
-      </header>
+    <AccentProvider>
+      <ConversationProvider>
+        <main className="console dark flex h-dvh flex-col overflow-hidden bg-[var(--ink)] text-[var(--bone)]">
+          <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-[var(--night-hairline)] px-4 py-2.5">
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 text-sm font-semibold tracking-[0.26em] uppercase transition-opacity hover:opacity-70"
+            >
+              <span aria-hidden className="size-1.5 rounded-full bg-[var(--night-accent)]" />
+              Arroyo
+            </Link>
 
-      {error && (
-        <div className="shrink-0 border-b bg-destructive/10 px-4 py-2 text-xs text-destructive">
-          {error}
-        </div>
-      )}
+            <span aria-hidden className="h-4 w-px bg-[var(--night-hairline)]" />
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[200px_minmax(0,1fr)_380px]">
-        <aside className="hidden min-h-0 flex-col gap-3 overflow-y-auto border-r p-3 lg:flex">
-          <PiecePalette />
-          <Separator />
-          <PieceInspector onCommit={runPlan} />
-        </aside>
+            <ScenarioPicker />
 
-        {/* The dock is positioned against this section, so the advisor sits over
-            the canvas rather than over the dashboard column. */}
-        <section className="relative min-h-0 p-3">
-          <PlanCanvas onCommit={runPlan} />
-          <VoiceDock />
-        </section>
+            {world && (
+              <span className="hidden truncate font-mono text-[10px] tracking-[0.14em] text-[var(--night-dim)] uppercase lg:block">
+                {world.scenario.event}
+              </span>
+            )}
 
-        <aside className="min-h-0 overflow-y-auto border-l p-3">
-          <DashboardSlot />
-        </aside>
-      </div>
-    </main>
-    </ConversationProvider>
+            <dl className="ml-auto flex items-center gap-x-5 font-mono text-[10px] tracking-[0.14em] text-[var(--night-dim)] uppercase tabular-nums">
+              <div className="flex gap-1.5">
+                <dt>Pieces</dt>
+                <dd className="font-medium text-[var(--bone)]">{pieceCount}</dd>
+              </div>
+              {result && (
+                <div className="hidden gap-1.5 sm:flex">
+                  <dt>Sim</dt>
+                  <dd className="font-medium text-[var(--bone)]">{result.runtimeMs} ms</dd>
+                </div>
+              )}
+            </dl>
+
+            <span aria-hidden className="hidden h-4 w-px bg-[var(--night-hairline)] lg:block" />
+            <AccentSelector />
+
+            <button
+              type="button"
+              disabled={pieceCount === 0}
+              onClick={() => {
+                clearPieces();
+                runPlan();
+              }}
+              className="rounded-[2px] border border-[var(--night-hairline)] px-3 py-1.5 font-mono text-[10px] tracking-[0.16em] uppercase transition-colors hover:border-[var(--night-accent)] hover:text-[var(--night-accent)] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-[var(--night-hairline)] disabled:hover:text-current"
+            >
+              Clear plan
+            </button>
+          </header>
+
+          {error && (
+            <div className="shrink-0 border-b border-[var(--night-hairline)] bg-[color-mix(in_oklab,var(--piece-closure),transparent_88%)] px-4 py-2 font-mono text-[10px] tracking-[0.12em] text-[var(--piece-closure)] uppercase">
+              {error}
+            </div>
+          )}
+
+          <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[216px_minmax(0,1fr)_380px]">
+            <aside className="hidden min-h-0 flex-col gap-4 overflow-y-auto border-r border-[var(--night-hairline)] p-3.5 lg:flex">
+              <PiecePalette />
+              <span aria-hidden className="h-px w-full shrink-0 bg-[var(--night-hairline)]" />
+              <PieceInspector onCommit={runPlan} />
+            </aside>
+
+            {/* The dock is positioned against this section, so the advisor sits
+                over the canvas rather than over the dashboard column. Nothing
+                inside here is restyled — the canvas and the dock theme
+                themselves from `.dark`. */}
+            <section className="relative min-h-0 p-3">
+              <PlanCanvas onCommit={runPlan} />
+              <VoiceDock />
+            </section>
+
+            <aside className="min-h-0 overflow-y-auto border-l border-[var(--night-hairline)] p-3.5">
+              <DashboardSlot />
+            </aside>
+          </div>
+        </main>
+      </ConversationProvider>
+    </AccentProvider>
   );
 }
 
@@ -146,19 +179,11 @@ function DashboardSlot() {
   const result = usePlanStore((s) => s.result);
   const loading = usePlanStore((s) => s.loading);
 
-  if (loading) {
+  if (loading || !result) {
     return (
-      <div className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
-        Loading scenario…
-      </div>
-    );
-  }
-
-  if (!result) {
-    return (
-      <div className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
-        No result yet.
-      </div>
+      <p className="font-mono text-[10px] tracking-[0.16em] text-[var(--night-dim)] uppercase">
+        {loading ? 'Loading scenario…' : 'No result yet'}
+      </p>
     );
   }
 
@@ -169,28 +194,54 @@ function DashboardSlot() {
     { label: 'Transit mode share', value: `${m.transitModeSharePct.toFixed(0)} %` },
     { label: 'Crowd peak', value: `${m.crowdPeakPerM2.toFixed(2)} /m²` },
     { label: 'Local revenue', value: `$${Math.round(m.localRevenueUsd).toLocaleString('en-US')}` },
-    { label: 'Plan score', value: result.score.total.toFixed(1) },
   ];
 
   return (
-    <div className="flex h-full flex-col gap-3 rounded-xl border border-dashed p-4">
-      <p className="text-xs font-medium">
-        Dashboard slot — P2 replaces this with <code className="rounded bg-muted px-1">&lt;Dashboard /&gt;</code>
-      </p>
+    <div className="flex h-full flex-col gap-5">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="font-mono text-[10px] tracking-[0.18em] text-[var(--night-accent)] uppercase">
+          Readout
+        </p>
+        <p className="font-mono text-[9px] tracking-[0.12em] text-[var(--night-dim)] uppercase">
+          Slot · P2 replaces
+        </p>
+      </div>
 
-      <dl className="flex flex-col gap-1.5">
+      {/* The score first and large: it is the number the demo is about, and the
+          one the weights will move. */}
+      <div className="flex items-baseline gap-3 border-b border-[var(--night-hairline)] pb-4">
+        <span className="text-[2.75rem] leading-none font-medium tracking-[-0.03em] tabular-nums">
+          {result.score.total.toFixed(1)}
+        </span>
+        <span className="font-mono text-[10px] tracking-[0.16em] text-[var(--night-dim)] uppercase">
+          Plan score
+        </span>
+      </div>
+
+      <dl className="flex flex-col">
         {rows.map((row) => (
-          <div key={row.label} className="flex items-baseline justify-between gap-3">
-            <dt className="text-[11px] text-muted-foreground">{row.label}</dt>
+          <div
+            key={row.label}
+            className="flex items-baseline justify-between gap-3 border-b border-[color-mix(in_oklab,var(--night-hairline),transparent_55%)] py-2"
+          >
+            <dt className="font-mono text-[10px] tracking-[0.14em] text-[var(--night-dim)] uppercase">
+              {row.label}
+            </dt>
             <dd className="text-sm tabular-nums">{row.value}</dd>
           </div>
         ))}
       </dl>
 
       {result.warnings.length > 0 && (
-        <ul className="flex flex-col gap-1 text-[11px] leading-relaxed text-muted-foreground">
+        <ul className="flex flex-col gap-1.5">
           {result.warnings.map((w) => (
-            <li key={w}>⚠ {w}</li>
+            <li
+              key={w}
+              className="flex gap-2 font-mono text-[10px] leading-relaxed tracking-[0.06em] text-[var(--night-dim)]"
+            >
+              <span aria-hidden className="text-[var(--piece-closure)]">!</span>
+              {w}
+            </li>
           ))}
         </ul>
       )}

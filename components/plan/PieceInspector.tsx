@@ -6,7 +6,6 @@
 // hub at 2,000 and at 12,000 boardings an hour are two different plans.
 
 import { Slider } from '@/components/ui/slider';
-import { Button } from '@/components/ui/button';
 import { PIECE_META } from '@/lib/pieces';
 import { selectSelectedPiece, usePlanStore } from '@/lib/store';
 
@@ -22,9 +21,14 @@ export function PieceInspector({ onCommit }: Props) {
 
   if (!piece) {
     return (
-      <p className="px-1 text-[11px] leading-snug text-muted-foreground">
-        Select a piece to set its capacity.
-      </p>
+      <div className="flex flex-col gap-2.5">
+        <p className="font-mono text-[10px] tracking-[0.18em] text-[var(--night-accent)] uppercase">
+          Inspector
+        </p>
+        <p className="font-mono text-[9px] leading-relaxed tracking-[0.06em] text-[var(--night-dim)]">
+          Select a piece to set its capacity.
+        </p>
+      </div>
     );
   }
 
@@ -33,20 +37,30 @@ export function PieceInspector({ onCommit }: Props) {
   const step = Math.max(Math.round(max / 100), 1);
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-3">
+      <p className="font-mono text-[10px] tracking-[0.18em] text-[var(--night-accent)] uppercase">
+        Inspector
+      </p>
+
       <div className="flex items-center gap-2">
-        <span aria-hidden className="size-3 rounded-[3px]" style={{ background: meta.color }} />
-        <span className="flex-1 truncate text-xs font-medium">{meta.label}</span>
-        <span className="text-[10px] text-muted-foreground tabular-nums">
+        <span aria-hidden className="size-2.5 rounded-[1px]" style={{ background: meta.color }} />
+        <span className="flex-1 truncate text-[0.8125rem]">{meta.label}</span>
+      </div>
+
+      <div className="flex items-baseline justify-between gap-2 border-b border-[var(--night-hairline)] pb-2 font-mono text-[9px] tracking-[0.1em] text-[var(--night-dim)] uppercase tabular-nums">
+        <span>Position</span>
+        <span className="text-[var(--bone)]">
           {Math.round(piece.pos.x)}, {Math.round(piece.pos.y)} m
         </span>
       </div>
 
       {meta.defaultCapacity > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-baseline justify-between text-[11px]">
-            <span className="text-muted-foreground">{meta.unit}</span>
-            <span className="font-medium tabular-nums">{piece.capacity.toLocaleString()}</span>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="font-mono text-[9px] tracking-[0.1em] text-[var(--night-dim)] uppercase">
+              {meta.unit}
+            </span>
+            <span className="text-sm tabular-nums">{piece.capacity.toLocaleString()}</span>
           </div>
           <Slider
             min={0}
@@ -60,28 +74,26 @@ export function PieceInspector({ onCommit }: Props) {
       )}
 
       <div className="flex gap-1.5">
-        <Button
-          size="sm"
-          variant="outline"
-          className="flex-1 text-xs"
+        <button
+          type="button"
+          className="flex-1 rounded-[2px] border border-[var(--night-hairline)] py-1.5 font-mono text-[10px] tracking-[0.14em] uppercase transition-colors hover:border-[var(--night-accent)] hover:text-[var(--night-accent)]"
           onClick={() => {
             rotatePiece(piece.id, piece.rotation + Math.PI / 12);
             onCommit?.();
           }}
         >
           Rotate
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="flex-1 text-xs"
+        </button>
+        <button
+          type="button"
+          className="flex-1 rounded-[2px] border border-[var(--night-hairline)] py-1.5 font-mono text-[10px] tracking-[0.14em] uppercase transition-colors hover:border-[var(--piece-closure)] hover:text-[var(--piece-closure)]"
           onClick={() => {
             removePiece(piece.id);
             onCommit?.();
           }}
         >
           Remove
-        </Button>
+        </button>
       </div>
     </div>
   );
