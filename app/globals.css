@@ -206,6 +206,26 @@
 }
 
 /* ============================================================
+   The instrument's accent.
+
+   These live on :root, NOT inside .night, and that placement is
+   load-bearing. AccentProvider sets them as an inline style on
+   <html>; a declaration inside .night would sit on a DESCENDANT of
+   <html>, and a descendant's own declaration beats an inherited
+   value, so the picker would silently do nothing to anything styled
+   in CSS. (It would still relight the 3D model, which reads the
+   value from React rather than from CSS — which is exactly the sort
+   of half-working that takes a while to spot.)
+
+   This is the value before hydration and if JavaScript never arrives.
+   ============================================================ */
+
+:root {
+  --night-accent: oklch(0.80 0.09 230);
+  --night-accent-deep: oklch(0.58 0.09 230);
+}
+
+/* ============================================================
    Night field — the landing page's own surface.
    Deliberately dark in BOTH themes: `/` is a planning console, not an
    app screen. Scoped to .night so it cannot leak into /plan, which
@@ -301,6 +321,33 @@
 
 @media (prefers-reduced-motion: reduce) {
   .night .shuttle {
+    animation: none;
+  }
+}
+
+/* The "built with" ticker. One CSS animation, no JavaScript: the track holds
+   the list twice and slides by exactly -50%, so the second copy lands where
+   the first began and the restart is invisible. Any other number of copies
+   and it jumps. */
+.night .stack-loop-track {
+  animation: stack-loop 44s linear infinite;
+}
+
+.night .stack-loop:hover .stack-loop-track {
+  animation-play-state: paused;
+}
+
+@keyframes stack-loop {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .night .stack-loop-track {
     animation: none;
   }
 }

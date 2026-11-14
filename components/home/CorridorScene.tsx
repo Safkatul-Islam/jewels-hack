@@ -19,6 +19,8 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useState, type ReactNode } from 'react';
 
+import { useAccent } from './AccentProvider';
+
 const CorridorCanvas = dynamic(
   () => import('./CorridorCanvas').then((m) => m.CorridorCanvas),
   { ssr: false },
@@ -41,6 +43,7 @@ export function CorridorScene({ children }: { children: ReactNode }) {
   const [enabled, setEnabled] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [ready, setReady] = useState(false);
+  const { accent } = useAccent();
 
   useEffect(() => {
     if (!hasWebGL()) return;
@@ -68,7 +71,7 @@ export function CorridorScene({ children }: { children: ReactNode }) {
           className="absolute inset-0 transition-opacity duration-1000 ease-out"
           style={{ opacity: ready ? 1 : 0 }}
         >
-          <CorridorCanvas reduced={reduced} onReady={() => setReady(true)} />
+          <CorridorCanvas reduced={reduced} onReady={() => setReady(true)} lamp={accent.lamp} />
         </div>
       ) : null}
     </div>

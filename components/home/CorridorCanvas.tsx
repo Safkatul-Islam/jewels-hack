@@ -226,34 +226,29 @@ function padOutline(f: Footprint, color: string, opacity: number): THREE.Line {
   );
 }
 
-/** Lights as points. Cheap, and they read as sources rather than as surfaces. */
-function lightPoints(items: Light[], scale = 1): THREE.Points | null {
+/**
+ * One Points object per light TONE, with a flat material colour rather than
+ * per-vertex colours — which is what lets the accent recolour the whole cool
+ * group later by setting a single material colour, instead of rewriting a
+ * buffer attribute every time somebody clicks a swatch.
+ */
+function lightPoints(items: Light[], color: string, scale = 1): THREE.Points | null {
   if (items.length === 0) return null;
   const position = new Float32Array(items.length * 3);
-  const color = new Float32Array(items.length * 3);
-  const size = new Float32Array(items.length);
-  const tint = new THREE.Color();
   items.forEach((l, i) => {
     const [x, z] = toScene(l.x, l.y);
     position[i * 3] = x;
     position[i * 3 + 1] = s(l.h);
     position[i * 3 + 2] = z;
-    tint.set(LAMP[l.tone]);
-    color[i * 3] = tint.r;
-    color[i * 3 + 1] = tint.g;
-    color[i * 3 + 2] = tint.b;
-    size[i] = l.size;
   });
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(position, 3));
-  geometry.setAttribute('color', new THREE.BufferAttribute(color, 3));
-  void size;
   return new THREE.Points(
     geometry,
     new THREE.PointsMaterial({
+      color,
       size: 0.055 * scale,
       sizeAttenuation: true,
-      vertexColors: true,
       transparent: true,
       opacity: 0.95,
       depthWrite: false,
@@ -277,7 +272,7 @@ const ACCENT: Record<FacilityKind, string> = {
   road_closure: PIECE.closure,
 };
 
-function buildFacility(facility: Facility): THREE.Object3D[] {
+function buildFacility(facility: Facility, lights: Light[]): THREE.Object3D[] {
   const out: THREE.Object3D[] = [];
   const accent = ACCENT[facility.kind];
 
@@ -295,14 +290,28 @@ function buildFacility(facility: Facility): THREE.Object3D[] {
     out.push(capMesh);
   }
 
-  const lit = lightPoints(facility.lights, facility.kind === 'park_and_ride' ? 1.6 : 1);
-  if (lit) out.push(lit);
+  lights.push(...facility.lights);
 
   return out;
 }
 
-function buildStatic(): THREE.Group {
+/**
+ * Everything the accent recolours, held by reference so a swatch click is a
+ * handful of `.color.set()` calls rather than a scene rebuild.
+ */
+interface Built {
+  root: THREE.Group;
+  cool: THREE.Points | null;
+  spill: THREE.PointLight;
+  /** the pitch, which is emissive — the event is happening */
+  pitch: THREE.MeshStandardMaterial;
+  /** bowl rim, secure perimeter, facade ribs */
+  rings: THREE.LineBasicMaterial[];
+}
+
+function buildStatic(): Built {
   const root = new THREE.Group();
+  const lights: Light[] = [];
 
   // --- ground ---
   // Lifted off pure ink: a cast shadow on a near-black surface is not a
@@ -373,22 +382,20 @@ function buildStatic(): THREE.Group {
 
   // The pitch is EMISSIVE: the event is happening, and the bowl spilling light
   // over its rim is the thing that makes the whole image read as "tonight".
-  const pitch = new THREE.Mesh(
-    new THREE.CircleGeometry(s(rPitch), 72),
-    new THREE.MeshStandardMaterial({
-      color: '#2c3a4a',
-      emissive: '#6f90b4',
-      emissiveIntensity: 0.65,
-      roughness: 1,
-      metalness: 0,
-    }),
-  );
+  const pitchMaterial = new THREE.MeshStandardMaterial({
+    color: '#2c3a4a',
+    emissive: LAMP.cool,
+    emissiveIntensity: 0.75,
+    roughness: 1,
+    metalness: 0,
+  });
+  const pitch = new THREE.Mesh(new THREE.CircleGeometry(s(rPitch), 72), pitchMaterial);
   pitch.rotation.x = -Math.PI / 2;
   pitch.position.y = s(pitchH);
   root.add(pitch);
 
   // Light actually leaving the bowl, so the rim and the apron catch it.
-  const spill = new THREE.PointLight('#9fc0e4', 3.2, s(plan(900)), 2);
+  const spill = new THREE.PointLight(LAMP.cool, 3.2, s(plan(900)), 2);
   spill.position.set(0, s(h) * 1.1, 0);
   root.add(spill);
 
@@ -427,18 +434,21 @@ function buildStatic(): THREE.Group {
       size: 0.6,
     });
   }
-  const concourseLights = lightPoints(concourse, 0.9);
-  if (concourseLights) root.add(concourseLights);
+  lights.push(...concourse);
 
-  root.add(ring(s(rRim), s(h), NIGHT.bone, 1));
-  root.add(ring(s(rRim) - 0.006, s(h) - 0.003, NIGHT.bone, 0.75));
+  const rimA = ring(s(rRim), s(h), NIGHT.bone, 1);
+  const rimB = ring(s(rRim) - 0.006, s(h) - 0.003, NIGHT.bone, 0.75);
+  root.add(rimA, rimB);
 
   // --- the secure perimeter, with the gates sitting on it ---
-  root.add(ring(s(VENUE_PERIMETER), 0.006, NIGHT.hairline, 0.7, 128));
+  const perimeter = ring(s(VENUE_PERIMETER), 0.006, NIGHT.hairline, 0.7, 128);
+  root.add(perimeter);
+
+  const rings = [rimA, rimB, perimeter].map((l) => l.material as THREE.LineBasicMaterial);
 
   // --- facilities ---
   for (const facility of FACILITIES) {
-    for (const object of buildFacility(facility)) root.add(object);
+    for (const object of buildFacility(facility, lights)) root.add(object);
   }
 
   // --- existing businesses: the shopfront row the villages undercut ---
@@ -459,12 +469,21 @@ function buildStatic(): THREE.Group {
   const homeMesh = instanced(homes, '#141b17');
   if (homeMesh) root.add(homeMesh);
 
-  const windows = lightPoints(WINDOWS, 0.8);
-  if (windows) root.add(windows);
+  lights.push(...WINDOWS, ...lamps);
 
-  // --- street lamps ---
-  const lampPoints = lightPoints(lamps, 1.1);
-  if (lampPoints) root.add(lampPoints);
+  // --- every light in the scene, grouped by tone ---
+  // Warm is the city and the stalls; cool is the plan's own lighting and is
+  // what the accent drives; clinical is the gates, which stay clinical.
+  const warmPoints = lightPoints(lights.filter((l) => l.tone === 'warm'), LAMP.warm, 0.85);
+  if (warmPoints) root.add(warmPoints);
+  const clinicalPoints = lightPoints(
+    lights.filter((l) => l.tone === 'clinical'),
+    LAMP.clinical,
+    0.95,
+  );
+  if (clinicalPoints) root.add(clinicalPoints);
+  const cool = lightPoints(lights.filter((l) => l.tone === 'cool'), LAMP.cool, 1.15);
+  if (cool) root.add(cool);
 
   // --- anchors ---
   const anchors = instanced([RAIL_ANCHOR, LOT_ANCHOR], NIGHT.inkRaise);
@@ -512,7 +531,7 @@ function buildStatic(): THREE.Group {
   root.add(key.target);
   root.add(key);
 
-  return root;
+  return { root, cool, spill, pitch: pitchMaterial, rings };
 }
 
 /** Points, positions and colours rebuilt every frame from the drift vectors. */
@@ -603,12 +622,15 @@ interface SceneProps {
   reduced: boolean;
   onReady: () => void;
   labels: React.RefObject<(HTMLSpanElement | null)[]>;
+  /** the colour the plan's own lighting is thrown in */
+  lamp: string;
 }
 
-function Scene({ reduced, onReady, labels }: SceneProps) {
+function Scene({ reduced, onReady, labels, lamp }: SceneProps) {
   const { scene, camera, size } = useThree();
 
-  const statics = useMemo(buildStatic, []);
+  const built = useMemo(buildStatic, []);
+  const statics = built.root;
   const egress = useMemo(buildEgress, []);
 
   const shuttle = useMemo(() => {
@@ -646,10 +668,10 @@ function Scene({ reduced, onReady, labels }: SceneProps) {
   }, [scene]);
 
   useEffect(() => {
-    const built = [statics, shuttle];
+    const roots = [statics, shuttle];
     const points = egress.points;
     return () => {
-      for (const root of built) {
+      for (const root of roots) {
         root.traverse((node) => {
           const mesh = node as Partial<THREE.Mesh>;
           mesh.geometry?.dispose();
@@ -662,6 +684,18 @@ function Scene({ reduced, onReady, labels }: SceneProps) {
       (points.material as THREE.Material).dispose();
     };
   }, [statics, shuttle, egress]);
+
+  // The accent recolours the LIGHT the plan is lit by — the lamps, the masts,
+  // the service banks, the bowl's spill — and nothing else. The three
+  // population colours are a legend and are not the picker's to move.
+  useEffect(() => {
+    if (built.cool) (built.cool.material as THREE.PointsMaterial).color.set(lamp);
+    built.spill.color.set(lamp);
+    // The bowl's own light is the loudest thing the accent touches: the pitch
+    // is what the whole image is lit from.
+    built.pitch.emissive.set(lamp);
+    for (const material of built.rings) material.color.set(lamp);
+  }, [built, lamp]);
 
   const target = useMemo(
     () => (size.width < 1024 ? TARGET_NARROW : TARGET_WIDE).clone(),
@@ -745,9 +779,10 @@ function Scene({ reduced, onReady, labels }: SceneProps) {
 export interface CorridorCanvasProps {
   reduced: boolean;
   onReady: () => void;
+  lamp: string;
 }
 
-export function CorridorCanvas({ reduced, onReady }: CorridorCanvasProps) {
+export function CorridorCanvas({ reduced, onReady, lamp }: CorridorCanvasProps) {
   const labels = useRef<(HTMLSpanElement | null)[]>([]);
 
   return (
@@ -769,7 +804,7 @@ export function CorridorCanvas({ reduced, onReady }: CorridorCanvasProps) {
         // page behind it.
         style={{ pointerEvents: 'none' }}
       >
-        <Scene reduced={reduced} onReady={onReady} labels={labels} />
+        <Scene reduced={reduced} onReady={onReady} labels={labels} lamp={lamp} />
       </Canvas>
 
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
