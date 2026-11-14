@@ -108,7 +108,7 @@ export function VoiceDock() {
   }
 
   return (
-    <div className="pointer-events-none absolute bottom-4 right-4 z-20 w-[min(26rem,calc(100vw-2rem))]">
+    <div className="pointer-events-none absolute right-4 bottom-[86px] z-20 w-[min(26rem,calc(100vw-2rem))]">
       <div className="pointer-events-auto overflow-hidden rounded-2xl border bg-card/95 shadow-lg backdrop-blur">
         <div className="flex items-center gap-2 px-3 pt-3">
           <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">

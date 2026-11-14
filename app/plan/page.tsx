@@ -17,6 +17,7 @@ import { PieceInspector } from '@/components/plan/PieceInspector';
 import { VoiceDock } from '@/components/voice/VoiceDock';
 import { PiecePalette } from '@/components/plan/PiecePalette';
 import { PlanCanvas } from '@/components/plan/PlanCanvas';
+import { PlaybackBar } from '@/components/plan/PlaybackBar';
 import { ScenarioPicker } from '@/components/plan/ScenarioPicker';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -119,8 +120,15 @@ export default function PlanPage() {
 
         {/* The dock is positioned against this section, so the advisor sits over
             the canvas rather than over the dashboard column. */}
-        <section className="relative min-h-0 p-3">
-          <PlanCanvas onCommit={runPlan} />
+        {/* The canvas and the run it produced, stacked: the plan above, the
+            egress timeline it generates below. The dock is positioned against
+            this section, so the advisor sits over the canvas rather than over
+            the dashboard column. */}
+        <section className="relative flex min-h-0 flex-col gap-3 p-3">
+          <div className="relative min-h-0 flex-1">
+            <PlanCanvas onCommit={runPlan} />
+          </div>
+          <PlaybackBar />
           <VoiceDock />
         </section>
 

@@ -45,6 +45,74 @@ export function fitTransform(
   return { scale, tx: slackX, ty: slackY, width, height };
 }
 
+/**
+ * The user's zoom and pan, on top of the fitted transform.
+ *
+ * Kept separate from `Transform` on purpose: `fitTransform` is a pure function
+ * of (bbox, viewport) and must stay that way, because the ArUco table mode and
+ * the tests both depend on a scenario filling the frame predictably. The view
+ * is a user preference layered over it, and `composeView` is the only thing
+ * that mixes the two.
+ *
+ * Semantics: screen = fitted_screen * k + pan.
+ */
+export interface ViewState {
+  k: number;
+  panX: number;
+  panY: number;
+}
+
+export const IDENTITY_VIEW: ViewState = { k: 1, panX: 0, panY: 0 };
+
+export const MIN_ZOOM = 1;
+export const MAX_ZOOM = 14;
+
+/**
+ * Fold a view into a fitted transform, producing a transform that every other
+ * function here accepts. Because the composition is affine and uniform, this is
+ * just a scaled scale and a scaled-then-shifted origin — which is what keeps
+ * `screenToWorld` exact under zoom, and therefore keeps a drag from drifting
+ * away from the pointer.
+ */
+export function composeView(fit: Transform, view: ViewState): Transform {
+  return {
+    scale: fit.scale * view.k,
+    tx: fit.tx * view.k + view.panX,
+    ty: fit.ty * view.k + view.panY,
+    width: fit.width,
+    height: fit.height,
+  };
+}
+
+/**
+ * Zoom to `nextK` about a fixed screen point, so the world under the cursor
+ * stays under the cursor. Returns the view; clamping to [MIN_ZOOM, MAX_ZOOM]
+ * happens here so callers cannot produce a view that escapes the viewport.
+ */
+export function zoomAt(view: ViewState, nextK: number, focus: Vec2): ViewState {
+  const k = Math.min(Math.max(nextK, MIN_ZOOM), MAX_ZOOM);
+  // The fitted-space point under the cursor must be invariant:
+  //   (focus - pan) / k  ===  (focus - pan') / k'
+  const fx = (focus.x - view.panX) / view.k;
+  const fy = (focus.y - view.panY) / view.k;
+  return { k, panX: focus.x - fx * k, panY: focus.y - fy * k };
+}
+
+/**
+ * Keep the fitted world in contact with the viewport. At k = 1 the fit already
+ * fills the frame, so pan is pinned to zero; above that, pan is bounded by how
+ * much of the scaled frame hangs off each edge.
+ */
+export function clampView(view: ViewState, width: number, height: number): ViewState {
+  const slackX = Math.max(0, width * (view.k - 1));
+  const slackY = Math.max(0, height * (view.k - 1));
+  return {
+    k: view.k,
+    panX: Math.min(0, Math.max(-slackX, view.panX)),
+    panY: Math.min(0, Math.max(-slackY, view.panY)),
+  };
+}
+
 export function worldToScreen(t: Transform, p: Vec2, bbox: BBox): Vec2 {
   return {
     x: (p.x - bbox.minX) * t.scale + t.tx,

@@ -351,3 +351,78 @@
     animation: none;
   }
 }
+
+/* ============================================================
+   Plan canvas — the map palette. P1 owns these.
+
+   The canvas is a BASEMAP now, not graph paper: warm paper, pale
+   building fabric, white street surfaces with grey casings. The
+   plan's own objects (venue, anchors, pieces, flows) stay dark and
+   saturated against it — that figure/ground contrast is the whole
+   reason the canvas reads as a place instead of a sketch.
+   ============================================================ */
+
+:root {
+  --paper: oklch(0.974 0.006 85);
+  --paper-edge: oklch(0.845 0.010 85);
+
+  /* generated city fabric — see components/plan/basemapGeometry.ts */
+  --fabric: oklch(0.926 0.004 250);
+  --fabric-dark: oklch(0.886 0.006 250);
+  --fabric-edge: oklch(0.862 0.008 250);
+
+  /* streets are drawn twice: a casing, then the surface on top */
+  --road-casing: oklch(0.800 0.008 250);
+  --road-fill: oklch(0.995 0.002 85);
+
+  /* the plan's own ink */
+  --plan-ink: oklch(0.205 0.012 255);
+  --plan-hairline: oklch(0.72 0.012 255);
+
+  /* a facility's pavement. Solid and mid-toned on purpose: a translucent
+     surface lets the fabric and the blocks bleed through, and the white stall
+     ticks drawn on it stop reading. This is the asphalt. */
+  --facility-surface: oklch(0.638 0.012 255);
+  --facility-tick: oklch(0.985 0.002 85);
+}
+
+.dark {
+  --paper: oklch(0.170 0.012 255);
+  --paper-edge: oklch(0.300 0.015 255);
+
+  --fabric: oklch(0.225 0.012 255);
+  --fabric-dark: oklch(0.262 0.014 255);
+  --fabric-edge: oklch(0.302 0.014 255);
+
+  --road-casing: oklch(0.300 0.012 255);
+  --road-fill: oklch(0.425 0.012 255);
+
+  --plan-ink: oklch(0.945 0.006 85);
+  --plan-hairline: oklch(0.45 0.012 255);
+
+  --facility-surface: oklch(0.372 0.014 255);
+  --facility-tick: oklch(0.88 0.006 85);
+}
+
+/* Flow ribbons on the plan canvas. The dash pattern travels along the route,
+   which is what makes a corridor read as carrying people rather than as a
+   coloured line. `--plan-dash` is set inline per ribbon to the pattern's own
+   length, so the loop closes exactly and the motion never visibly restarts. */
+@keyframes plan-flow-move {
+  to {
+    stroke-dashoffset: calc(-1 * var(--plan-dash, 24px));
+  }
+}
+
+.plan-flow-move {
+  stroke-dashoffset: 0;
+  animation-name: plan-flow-move;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-flow-move {
+    animation: none;
+  }
+}

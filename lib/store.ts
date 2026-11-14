@@ -59,6 +59,16 @@ export interface PlanStore {
   compare: boolean;
   heatmap: HeatmapLayer;
 
+  // ---- playback ----
+  //
+  // Where on the egress timeline the canvas is showing. `null` means "the whole
+  // run at once" — the aggregate view, which is what you want while editing.
+  // A number scrubs SimResult.timeline, which is the only per-minute data the
+  // contract returns; everything animated on the canvas is a rendering of those
+  // counts, not a second simulation.
+  playMinute: number | null;
+  playing: boolean;
+
   // ---- scenario ----
   loadScenarioById: (id: string) => Promise<void>;
   /** P4: markersToWorld() lands here. Also used by preset plans. */
@@ -102,6 +112,8 @@ export interface PlanStore {
   setBaseline: (r: SimResult | null) => void;
   setCompare: (on: boolean) => void;
   setHeatmap: (layer: HeatmapLayer) => void;
+  setPlayMinute: (m: number | null) => void;
+  setPlaying: (on: boolean) => void;
 }
 
 export const usePlanStore = create<PlanStore>((set) => ({
@@ -121,6 +133,8 @@ export const usePlanStore = create<PlanStore>((set) => ({
   baseline: null,
   compare: false,
   heatmap: 'none',
+  playMinute: null,
+  playing: false,
 
   loadScenarioById: async (id) => {
     set({ loading: true, error: null });
@@ -137,6 +151,8 @@ export const usePlanStore = create<PlanStore>((set) => ({
         result: null,
         baseline: null,
         compare: false,
+        playMinute: null,
+        playing: false,
         selectedPieceId: null,
         draggingPieceId: null,
         armedKind: null,
@@ -256,10 +272,14 @@ export const usePlanStore = create<PlanStore>((set) => ({
   setWeights: (w) => set((s) => ({ weights: { ...s.weights, ...w } })),
 
   setNetwork: (network) => set({ network }),
-  setResult: (result) => set({ result }),
+  // A fresh result replaces the timeline the playhead was indexing, so playback
+  // rewinds rather than pointing into a run that no longer exists.
+  setResult: (result) => set({ result, playMinute: null, playing: false }),
   setBaseline: (baseline) => set({ baseline }),
   setCompare: (compare) => set({ compare }),
   setHeatmap: (heatmap) => set({ heatmap }),
+  setPlayMinute: (playMinute) => set({ playMinute }),
+  setPlaying: (playing) => set({ playing }),
 }));
 
 // ---- selectors: import these rather than reaching into the store shape ----
