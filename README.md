@@ -34,9 +34,23 @@ unusually sharp example of the general problem. Swap the file and the whole worl
 | [03-WORKPLAN.md](docs/03-WORKPLAN.md) | Everyone | 4-person split, hour-by-hour timeline, cut list |
 | [04-TABLE-MODE.md](docs/04-TABLE-MODE.md) | P4 | ArUco markers, calibration, 3D assets, fallbacks |
 | [05-DECISIONS.md](docs/05-DECISIONS.md) | Reference | Why things are this way, and what's still unverified |
+| [06-P4-HANDOFF.md](docs/06-P4-HANDOFF.md) | P4 / integration | Table setup, marker printing, calibration, checks and remaining work |
+| [07-ENGINEERING-NOTES.md](docs/07-ENGINEERING-NOTES.md) | Everyone | Researched sources and owner-approved engineering decisions |
 
 ## Status
 
-Planning only — no application code yet. Start at `03-WORKPLAN.md`.
+P1's Next.js planner scaffold and P4's camera/table route are implemented locally.
+Simulation/dashboard integration and physical camera acceptance remain in progress.
+Scenarios contain synthetic, illustrative data; they are not official plans or forecasts.
+
+```sh
+npm ci
+npm run dev
+```
+
+Open `/plan` for mouse planning, `/table` for marker input, and `/markers/index.html`
+for printing. Start table testing with **Load marker test** before connecting a camera.
+Run `npm run test:vision`, `npm run typecheck`, `npm run lint`, and `npm run build`
+for software checks. See the P4 handoff for physical acceptance and camera setup.
 
 Built at Joe City Hack 6.0.
