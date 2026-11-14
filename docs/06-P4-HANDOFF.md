@@ -14,7 +14,7 @@ npm run dev
 ```
 
 Open **http://localhost:3000/table** (use the port printed by Next.js).
-Click **Load marker test**, move the shuttle slider, enable **3D primitives**, then
+Click **Load marker test**, move the position slider, enable **3D models**, then
 **Confirm plan**. Follow **Open planner** to see the confirmed pieces through P1's
 shared Zustand store. Client navigation preserves that store; a full reload resets it.
 
@@ -37,6 +37,13 @@ git diff --check
 `markers` regenerates nine SVGs and the printable HTML in `public/markers/`.
 The scenario generator is deterministic; both fixture networks have 30 junctions,
 49 connected edges, 40 businesses, 12 blocks, six fictional personas and two anchors.
+
+While waiting for a printer, use **Test piece** to select IDs 10–16, the rotation
+slider to turn the marker, and **Hide test piece** / **Hide calibration markers**
+to exercise disappearance and recovery. Hiding one piece leaves the companion marker
+visible, so Confirm may remain available. Hiding calibration markers disables overhead
+Confirm. These controls change generated pixels before detection, rather than inserting
+fake readings. The generated scene never places duplicate IDs in one frame.
 
 ## Print and connect the camera
 
@@ -96,9 +103,20 @@ stable IDs, capacities and locked pieces. The route uses `setWorld` and `setResu
 only on explicit Confirm. P1's map layers and coordinate transform render the draft.
 
 `components/three/MarkerScene.tsx` is a client-only, dynamically imported R3F Canvas.
-`PieceModel.tsx` provides declarative primitive meshes and a stadium ring. R3F owns
-GPU cleanup. The overlay uses orthographic image coordinates and demand rendering;
-it is not perspective-correct AR pose estimation. Models follow P1's colour tokens.
+`PieceModel.tsx` provides original primitive models for all nine kinds: stadium bowl,
+arrival shelter, shuttle bus, parking with cars, market stalls, crosswalk, bike,
+road barrier and security gate. They need no downloaded assets or textures. The
+**Model size** slider changes only the illustration, never world coordinates/capacity.
+
+Image-space movement, scale and rotation interpolate over a short interval, with the
+shortest rotation across ±pi. Demand rendering continues only while settling or when
+inputs change. R3F owns GPU cleanup. Render errors/context loss select a visible
+fallback while the independent marker/map/Confirm path remains available. Toggle 3D
+off/on to retry. Context-loss listener teardown has an automated test; real driver
+failure has not been injected in the browser.
+
+The overlay remains a stylized orthographic illustration, not perspective-correct AR
+pose estimation. Models follow P1's colour tokens. Physical acceptance is still needed.
 
 Root dependency additions: `js-aruco2@2.0.0`, `three@0.182.0`,
 `@react-three/fiber@9.8.2`, and development types `@types/three@0.182.0`.
@@ -111,14 +129,22 @@ empty unresolved IDs must not be counted as blocked access. See `fixtures/SCENAR
 
 ## Verification and physical acceptance
 
-Ten automated test groups pass: real dictionary IDs/rotations, blank frames, overhead
+Thirteen automated test groups pass: real dictionary IDs/rotations, blank frames, overhead
 orientation/origin/scenario distances, perspective interior points and degenerate
 calibration, immutable/locked pieces, jitter/occlusion, Confirm gating, fixture
-connectivity, and camera replacement/late-stream cleanup. Typecheck, lint and the
+connectivity, camera replacement/late-stream cleanup, overlay coordinates, frame-rate
+independent shortest-path rotation, and context-loss listener cleanup. Typecheck, lint and the
 Next.js production build pass.
 
 Browser checks cover generated detection/movement, R3F rendering, Confirm and shared
 planner navigation, capture reset on route departure, and calibration/scenario controls.
+The expanded test scene also exercises all movable IDs, rotation, occlusion/recovery,
+model sizing and repeated 3D toggles. A development hydration warning was traced to
+the browser extension's injected `cz-shortcut-listen` body attribute; no shared root
+layout change or warning suppression was applied.
+Confirmed JSON export was downloaded and inspected: the expected scenario, stable
+piece IDs, `fromMarker`, position and rotation survived serialization. Chrome's
+automation download event timed out, so verification used the actual downloaded file.
 No physical camera, printed dimensions, iPhone connection or venue-lighting performance
 has been verified. Run this physical check before claiming the live demo is ready:
 
