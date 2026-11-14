@@ -10,6 +10,7 @@ import { TableSession } from './session';
 import { MARKER_MAP, DICTIONARY, type PixelMarker, type VisionWorld, type Vec2 } from './contracts';
 import { validateWorld } from '../scenarios';
 import { CameraController } from './camera';
+import { advanceOverlayPose, markerOverlayPose, overlayAtRest, watchContextLoss } from './overlay';
 
 const {AR}=createRequire(import.meta.url)('js-aruco2');
 const close=(a:number,b:number)=>assert.ok(Math.abs(a-b)<1e-6,`${a} != ${b}`);
@@ -86,6 +87,48 @@ test('the actual detector recognises every generated marker, including ID zero a
 test('blank frame produces no markers',()=>{
   const data=new Uint8ClampedArray(240*240*4);data.fill(255);
   assert.deepEqual(detectMarkers(new AR.Detector({dictionaryName:DICTIONARY}),{width:240,height:240,data}as ImageData),[]);
+});
+
+test('3D overlay uses image coordinates, canonical heading and rejects degenerate detections', () => {
+  const square = marker(10, 200, 200);
+  const pose = markerOverlayPose(square, 720)!;
+  close(pose.x, 200); close(pose.y, 520); close(pose.size, 40); close(pose.rotation, 0);
+  const turned = { ...square, corners: [...square.corners.slice(1), square.corners[0]] };
+  close(markerOverlayPose(turned, 720)!.rotation, -Math.PI / 2);
+  assert.equal(markerOverlayPose({ ...square, corners: [] }, 720), null);
+  assert.equal(markerOverlayPose({ ...square, corners: square.corners.map(() => ({ x: 1, y: 1 })) }, 720), null);
+  assert.equal(markerOverlayPose(square, NaN), null);
+});
+
+test('3D interpolation crosses the angle seam by the short route and is frame-rate independent', () => {
+  const start = { x: 0, y: 0, size: 40, rotation: Math.PI - 0.02 };
+  const target = { x: 200, y: 100, size: 60, rotation: -Math.PI + 0.02 };
+  const first = advanceOverlayPose(start, target, 1 / 60);
+  assert.ok(first.rotation > start.rotation && first.rotation < Math.PI + 0.02);
+  assert.ok(first.x > 0 && first.x < target.x);
+  let sixty = start, thirty = start;
+  for (let i = 0; i < 60; i++) sixty = advanceOverlayPose(sixty, target, 1 / 60);
+  for (let i = 0; i < 30; i++) thirty = advanceOverlayPose(thirty, target, 1 / 30);
+  close(sixty.x, thirty.x); close(sixty.rotation, thirty.rotation);
+  assert.ok(overlayAtRest(sixty, target));
+  assert.deepEqual(advanceOverlayPose(start, target, -1), start);
+  assert.ok(advanceOverlayPose(start, target, 5).x < target.x);
+  assert.deepEqual(start, { x: 0, y: 0, size: 40, rotation: Math.PI - 0.02 });
+});
+
+test('GPU context loss notifies the overlay and its listener is removed on teardown', () => {
+  const canvas = new EventTarget();
+  let failures = 0;
+  const dispose = watchContextLoss(canvas, () => { failures++; });
+  const loss = new Event('webglcontextlost', { cancelable: true });
+  canvas.dispatchEvent(loss);
+  assert.equal(failures, 1);
+  assert.equal(loss.defaultPrevented, true);
+  dispose();
+  const afterUnmount = new Event('webglcontextlost', { cancelable: true });
+  canvas.dispatchEvent(afterUnmount);
+  assert.equal(failures, 1);
+  assert.equal(afterUnmount.defaultPrevented, false);
 });
 test('overhead calibration honours image Y flip, world origin and scenario distance',()=>{
   const w=world(), calibration=calibrateOverhead([marker(0,200,400),marker(1,200,200)],w)!;
