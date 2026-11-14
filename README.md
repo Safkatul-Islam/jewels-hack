@@ -39,8 +39,8 @@ unusually sharp example of the general problem. Swap the file and the whole worl
 
 ## Status
 
-P1's Next.js planner scaffold and P4's camera/table route are implemented locally.
-Simulation/dashboard integration and physical camera acceptance remain in progress.
+The planner, the simulation engine and P4's camera/table route are implemented; Confirm
+on `/table` runs the engine. The dashboard and physical camera acceptance remain in progress.
 Scenarios contain synthetic, illustrative data; they are not official plans or forecasts.
 
 ```sh
