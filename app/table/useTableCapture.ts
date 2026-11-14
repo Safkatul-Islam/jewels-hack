@@ -313,7 +313,7 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
     // Keep our own confirmed update from being mistaken for an external world reset.
     worldRef.current = next;
     onConfirm(next);
-    setStatus('Plan confirmed into the shared planner. Simulation integration is still pending.');
+    setStatus('Plan confirmed into the shared planner.');
   }
 
   return { view, status, busy, videoRef, canvasRef, devices, deviceId, setDeviceId,
