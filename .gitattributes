@@ -1,0 +1,27 @@
+# Normalise line endings across Windows and macOS.
+# Without this, four people on mixed OSes produce whole-file phantom diffs.
+* text=auto eol=lf
+
+# Keep platform scripts in their native endings.
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+*.ps1    text eol=crlf
+*.sh     text eol=lf
+
+# Binary — never normalise, never diff.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.webp   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.glb    binary
+*.gltf   binary
+*.mp4    binary
+*.mov    binary
+*.woff   binary
+*.woff2  binary
+
+# Generated — collapse in diffs and PR reviews.
+package-lock.json  linguist-generated=true -diff
