@@ -18,6 +18,8 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // Retired local preview artifacts; the maintained route is app/table/.
+      "tools/p4/**",
     ],
   },
 ];
