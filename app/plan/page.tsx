@@ -12,7 +12,9 @@
 
 import { useCallback, useEffect } from 'react';
 import Link from 'next/link';
+import { ConversationProvider } from '@elevenlabs/react';
 import { PieceInspector } from '@/components/plan/PieceInspector';
+import { VoiceDock } from '@/components/voice/VoiceDock';
 import { PiecePalette } from '@/components/plan/PiecePalette';
 import { PlanCanvas } from '@/components/plan/PlanCanvas';
 import { ScenarioPicker } from '@/components/plan/ScenarioPicker';
@@ -66,6 +68,10 @@ export default function PlanPage() {
   }, [world, result, runPlan]);
 
   return (
+    // The provider holds the ElevenLabs session and the registry the advisor's
+    // client tools register into. It opens no connection until VoiceDock calls
+    // startSession, so the page costs nothing extra until someone asks to talk.
+    <ConversationProvider>
     <main className="flex h-dvh flex-col overflow-hidden">
       <header className="flex shrink-0 items-center gap-3 border-b px-4 py-2.5">
         <Link href="/" className="text-sm font-semibold tracking-tight">
@@ -111,8 +117,11 @@ export default function PlanPage() {
           <PieceInspector onCommit={runPlan} />
         </aside>
 
-        <section className="min-h-0 p-3">
+        {/* The dock is positioned against this section, so the advisor sits over
+            the canvas rather than over the dashboard column. */}
+        <section className="relative min-h-0 p-3">
           <PlanCanvas onCommit={runPlan} />
+          <VoiceDock />
         </section>
 
         <aside className="min-h-0 overflow-y-auto border-l p-3">
@@ -120,6 +129,7 @@ export default function PlanPage() {
         </aside>
       </div>
     </main>
+    </ConversationProvider>
   );
 }
 
