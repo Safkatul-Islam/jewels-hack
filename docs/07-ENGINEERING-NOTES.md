@@ -76,7 +76,7 @@ and marker corner/Hamming fields before using them. Generator and detector use t
 dictionary. The confidence calculation is a heuristic, not a probability.
 
 Current commands are the root `npm run test:vision`, `typecheck`, `lint` and `build`.
-Ten test groups pass, including actual detector round trips for all nine IDs at two
+Thirteen test groups pass, including actual detector round trips for all nine IDs at two
 orientations and asynchronous camera replacement/late-stream cleanup. The Next.js
 production build includes `/table`. Browser checks exercise the integrated detector,
 movement, R3F primitives, Confirm/shared planner navigation and calibration controls.
@@ -87,6 +87,8 @@ Primary sources checked for the approved framework integration:
 | Source | Finding and implementation |
 | --- | --- |
 | https://r3f.docs.pmnd.rs/getting-started/installation | Fiber 9 pairs with React 19. Installed Fiber 9.8.2 and Three 0.182.0 against P1's React 19.1; declarative Canvas owns the render lifecycle. |
+| https://r3f.docs.pmnd.rs/advanced/scaling-performance | Checked in Chrome for the 3D polish. Keep `frameloop="demand"`; call `invalidate()` while interpolating; stop requesting frames once settled. Keep the original models small and avoid textures, postprocessing and new dependencies. |
+| https://r3f.docs.pmnd.rs/api/canvas#errors-and-fallbacks | Checked in Chrome and against installed Fiber 9.8.2 source. Canvas forwards rendering errors outward. Wrap it in a React boundary and listen for context loss, preserving the separate SVG/map input path. |
 | https://nextjs.org/docs/15/app/api-reference/directives/use-client | Camera hooks and interactive table components are client boundaries. Browser APIs run in effects/event handlers. |
 | https://nextjs.org/docs/15/app/guides/lazy-loading | `dynamic(..., { ssr: false })` belongs in a client component. The optional R3F scene is loaded this way. |
 | https://eslint.org/docs/latest/use/configure/ignore | Global ignores exclude the retired generated Vite artifacts from root source linting. |
@@ -97,6 +99,13 @@ existing store and clears stale results; engine integration remains P1/P3 work.
 Automatic approval review rejected recursive deletion of retired `tools/p4/` artifacts
 because it could remove uncommitted work. The safer resolution is retaining and
 ignoring that unused local directory, without retrying or bypassing the rejection.
+
+The owner's follow-up authorized finishing software/3D while printing is unavailable.
+This extends the approved primitive orthographic route with recognizable original
+models and detector-driven test controls. It introduces no assets, dependencies,
+physical pose estimation, shared contract changes or simulation changes. Geometry
+interpolation and context-loss cleanup have automated checks; actual printed detection
+and real GPU-driver failure remain unverified.
 
 ## Instruction-file acceptance
 
