@@ -8,12 +8,12 @@ export function ScoreDial({ value, label }: ScoreDialProps) {
   const offset = circumference - (value / 100) * circumference;
 
   return (
-    <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+    <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
+      <div className="text-[9px] font-medium uppercase tracking-[0.18em] text-slate-500">
         {label}
       </div>
-      <div className="relative mx-auto mt-6 flex h-40 w-40 items-center justify-center">
-        <svg className="h-40 w-40 -rotate-90" viewBox="0 0 120 120">
+      <div className="relative mx-auto mt-1 flex h-28 w-28 items-center justify-center">
+        <svg className="h-28 w-28 -rotate-90" viewBox="0 0 120 120">
           <circle
             cx="60"
             cy="60"
@@ -36,8 +36,10 @@ export function ScoreDial({ value, label }: ScoreDialProps) {
           />
         </svg>
         <div className="absolute text-center">
-          <div className="text-4xl font-semibold text-slate-900">{value}</div>
-          <div className="text-[10px] uppercase tracking-[0.22em] text-slate-500">
+          <div className="text-2xl font-semibold leading-none text-slate-900">
+            {value}
+          </div>
+          <div className="mt-1 text-[9px] uppercase tracking-[0.18em] text-slate-500">
             score
           </div>
         </div>

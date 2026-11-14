@@ -18,14 +18,14 @@ export function MetricCard({
   tone = "neutral",
 }: MetricCardProps) {
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${toneClasses[tone]}`}>
-      <p className="text-xs font-medium uppercase tracking-[0.18em] opacity-70">
+    <div className={`rounded-xl border p-2.5 shadow-sm ${toneClasses[tone]}`}>
+      <p className="text-[9px] font-medium uppercase tracking-[0.18em] opacity-70">
         {label}
       </p>
-      <div className="mt-3 flex items-end justify-between gap-3">
-        <div className="text-2xl font-semibold">{value}</div>
+      <div className="mt-1 flex items-end justify-between gap-2">
+        <div className="text-base font-semibold leading-none">{value}</div>
         {delta ? (
-          <div className="text-xs font-medium opacity-80">{delta}</div>
+          <div className="text-[10px] font-medium opacity-80">{delta}</div>
         ) : null}
       </div>
     </div>
