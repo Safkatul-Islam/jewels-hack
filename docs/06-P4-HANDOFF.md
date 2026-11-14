@@ -1,7 +1,9 @@
 # P4: Vision & 3D handoff
 
 Local branch: `p4-vision-table`. Pushes require explicit owner approval.
-P1's `peter` scaffold was merged locally with owner approval. The implementation
+P1's `peter` scaffold was merged locally with owner approval. On 2026-11-14 the owner
+also approved a local merge of `origin/main` at `45352bc` (engine, `/plan` wiring, voice
+advisor, landing page) as `8fb1496`. Nothing after `b543844` has been pushed. The implementation
 uses the root Next.js app and React Three Fiber; the standalone Vite lab is retired.
 
 ## Run and demonstrate
@@ -21,8 +23,10 @@ shared Zustand store. Client navigation preserves that store; a full reload rese
 The generated input goes through the **real js-aruco2 detector**. It is synthetic,
 clearly labelled, and does not establish physical camera performance. Draft movements
 remain local to the capture session until Confirm. Confirm writes the full world to
-the shared store and clears the previous result. **P3's simulation is not wired yet**;
-the route does not invent metrics or claim a simulation ran.
+the shared store, then runs P3's `buildNetwork` and `simulate` **once** and stores the
+network and result, the same sequence as P1's `runPlan`. `/table` reports only the run
+time and warning count; the outputs appear in `/plan`. If the engine throws, the stale
+network/result are cleared and the failure is shown. No metric is ever substituted.
 
 ```powershell
 npm run test:vision
@@ -118,14 +122,20 @@ failure has not been injected in the browser.
 The overlay remains a stylized orthographic illustration, not perspective-correct AR
 pose estimation. Models follow P1's colour tokens. Physical acceptance is still needed.
 
-Root dependency additions: `js-aruco2@2.0.0`, `three@0.182.0`,
-`@react-three/fiber@9.8.2`, and development types `@types/three@0.182.0`.
-P1's Next.js 15 / React 19 versions remain unchanged.
+Root dependencies after the `main` merge follow P1's manifest: `three@^0.187.0`
+(0.187.0 installed), `@react-three/fiber@^9.8.2`, `@types/three@^0.187.0`, plus P4's
+`js-aruco2@2.0.0`. The overlay was rechecked in the browser on r187. The merge kept
+P4's explicit synthetic wording for the picker entries in `lib/scenarios.ts`; P1's
+`main` wording differs, so coordinate before that file reaches `main`. `DraftPlan`
+passes `network={null}` and disables pointer input on P1's `WorldLayer`, whose new
+business/block dragging would otherwise edit the shared world from the draft preview.
 
-P1/P3 integration remaining: call `buildNetwork(confirmedWorld)` and then the actual
-simulation on Confirm when those modules are available. The store deliberately does
-not run simulation itself. Resolve fixture `accessNodeIds` using P3's node convention;
-empty unresolved IDs must not be counted as blocked access. See `fixtures/SCENARIOS.md`.
+Open integration item: every fixture block still has empty `accessNodeIds`, and the
+engine skips such blocks, so `residentDelayMin` and `residentsBlockedPct` are always 0.
+They are not counted as blocked, but the resident metrics carry no information yet.
+P3's nodes are now named `n_{x}_{y}` (0.5 m snap, `snapKey` in `lib/sim/network.ts`).
+Emitting those IDs from the generator needs owner approval and P3 agreement.
+See `fixtures/SCENARIOS.md`.
 
 ## Verification and physical acceptance
 
@@ -135,6 +145,16 @@ calibration, immutable/locked pieces, jitter/occlusion, Confirm gating, fixture
 connectivity, camera replacement/late-stream cleanup, overlay coordinates, frame-rate
 independent shortest-path rotation, and context-loss listener cleanup. Typecheck, lint and the
 Next.js production build pass.
+
+After the `main` merge (2026-11-14): typecheck, lint and the 13 vision test groups pass
+with the engine wiring; the production build passed on the merged tree before the wiring
+edit and was not rerun after it. In the dev server, generated markers were detected, the
+3D overlay rendered on three r187, and Confirm of a moved shuttle-hub marker changed
+`/plan` from plan score 57.9 to 39.7 using the stored 157 ms run (no rerun on arrival).
+The embedded preview reported `document.hidden`, throttling frames to about 1 fps, so
+Confirm was triggered by script right after a frame; the 500 ms freshness gate refused
+a normal click there, as designed. Local image/video input, camera switching, the
+angled calibration and JSON export were not rechecked after the merge.
 
 Browser checks cover generated detection/movement, R3F rendering, Confirm and shared
 planner navigation, capture reset on route departure, and calibration/scenario controls.
