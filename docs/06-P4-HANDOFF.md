@@ -130,12 +130,14 @@ P4's explicit synthetic wording for the picker entries in `lib/scenarios.ts`; P1
 passes `network={null}` and disables pointer input on P1's `WorldLayer`, whose new
 business/block dragging would otherwise edit the shared world from the draft preview.
 
-Open integration item: every fixture block still has empty `accessNodeIds`, and the
-engine skips such blocks, so `residentDelayMin` and `residentsBlockedPct` are always 0.
-They are not counted as blocked, but the resident metrics carry no information yet.
-P3's nodes are now named `n_{x}_{y}` (0.5 m snap, `snapKey` in `lib/sim/network.ts`).
-Emitting those IDs from the generator needs owner approval and P3 agreement.
-See `fixtures/SCENARIOS.md`.
+With owner approval (2026-11-14) the generator now fills each block's `accessNodeIds`
+with its four corner junctions, using P3's `snapKey` naming (`n_{x}_{y}`, 0.5 m snap).
+Before this the engine skipped every block, so both resident metrics were always 0.
+A fixture test checks the IDs against `buildNetwork`. Headless probe on the Rose Bowl
+fixture: baseline delay 0 min / 0% blocked; one closure 1.75 min / 16.7%; three closures
+28.9 min / 83.3%. Simulating residents raised that scenario's run time from about 87 ms
+to 150-200 ms here, at the edge of the 200 ms target. **P3 has not yet been told** about
+the convention dependency or the run time. See `fixtures/SCENARIOS.md`.
 
 ## Verification and physical acceptance
 
