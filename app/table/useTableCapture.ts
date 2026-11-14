@@ -6,7 +6,7 @@ import { CameraController } from '@/lib/vision/camera';
 import { detectMarkers, type ArucoDetector } from '@/lib/vision/aruco';
 import { bboxCorners, calibratePlanar } from '@/lib/vision/calibration';
 import { DICTIONARY, type PixelMarker } from '@/lib/vision/contracts';
-import { drawSampleFrame, loadSampleMarkers } from '@/lib/vision/sampleFrame';
+import { DEFAULT_SAMPLE_SETTINGS, drawSampleFrame, loadSampleMarkers, type SampleSettings } from '@/lib/vision/sampleFrame';
 import { TableSession } from '@/lib/vision/session';
 import type { TrackedReading } from '@/lib/vision/tracker';
 
@@ -42,7 +42,7 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
   const mountedRef = useRef(false);
   const frameTimeRef = useRef(0);
   const testImagesRef = useRef<Map<number, HTMLImageElement>>(new Map());
-  const testPositionRef = useRef(35);
+  const testSettingsRef = useRef<SampleSettings>({ ...DEFAULT_SAMPLE_SETTINGS });
   const modeRef = useRef<CalibrationMode>('overhead');
   const pointsRef = useRef<Vec2[]>([]);
   const selectingRef = useRef(false);
@@ -54,7 +54,7 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
   const [deviceId, setDeviceId] = useState('');
   const [mode, setMode] = useState<CalibrationMode>('overhead');
   const [points, setPoints] = useState<Vec2[]>([]);
-  const [testPosition, setTestPosition] = useState(35);
+  const [testSettings, setTestSettings] = useState<SampleSettings>({ ...DEFAULT_SAMPLE_SETTINGS });
 
   const releaseSource = useCallback(() => {
     generationRef.current++;
@@ -124,7 +124,7 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
         const context = canvas.getContext('2d', { willReadFrequently: true });
         if (!context) throw new Error('2D canvas is unavailable.');
         if (source.kind === 'test') {
-          drawSampleFrame(context, currentWorld, testImagesRef.current, testPositionRef.current);
+          drawSampleFrame(context, currentWorld, testImagesRef.current, testSettingsRef.current);
         } else {
           const video = videoRef.current;
           if (source.kind !== 'image' && (!video || video.readyState < 2)) return;
@@ -317,8 +317,11 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
   }
 
   return { view, status, busy, videoRef, canvasRef, devices, deviceId, setDeviceId,
-    mode, points, testPosition, startCamera, stop, loadTest, loadFile, changeMode,
+    mode, points, testSettings, startCamera, stop, loadTest, loadFile, changeMode,
     beginCalibration, selectCorner, confirm,
-    changeTestPosition(value: number) { testPositionRef.current = value; setTestPosition(value); },
+    changeTestSettings(update: Partial<SampleSettings>) {
+      testSettingsRef.current = { ...testSettingsRef.current, ...update };
+      setTestSettings(testSettingsRef.current);
+    },
   };
 }
