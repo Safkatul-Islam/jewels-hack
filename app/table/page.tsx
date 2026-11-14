@@ -6,6 +6,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScenarioPicker } from '@/components/plan/ScenarioPicker';
 import { PIECE_META } from '@/lib/pieces';
+import { buildNetwork } from '@/lib/sim/network';
+import { simulate } from '@/lib/sim/simulate';
 import type { WorldState } from '@/lib/sim/types';
 import { usePlanStore } from '@/lib/store';
 import { MARKER_MAP, PIECE_LABELS } from '@/lib/vision/contracts';
@@ -35,6 +37,11 @@ function readModelColors(): Record<string, string> {
   }));
 }
 
+/** Outcome of the engine run for the last confirmed plan; never a substitute result. */
+type SimulationNote =
+  | { scenarioId: string; ok: true; runtimeMs: number; warnings: number }
+  | { scenarioId: string; ok: false; message: string };
+
 export default function TablePage() {
   const world = usePlanStore((state) => state.world);
   const scenarioId = usePlanStore((state) => state.scenarioId);
@@ -45,6 +52,7 @@ export default function TablePage() {
   const [modelScale, setModelScale] = useState(2);
   const [colors, setColors] = useState<Record<string, string>>({});
   const [confirmed, setConfirmed] = useState<WorldState | null>(null);
+  const [simulation, setSimulation] = useState<SimulationNote | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -54,13 +62,26 @@ export default function TablePage() {
   const commitPlan = useCallback((next: WorldState) => {
     const store = usePlanStore.getState();
     store.setWorld(next);
-    store.setResult(null);
     setConfirmed(next);
+    // Same sequence as P1's runPlan: once per explicit Confirm, never per frame.
+    try {
+      const network = buildNetwork(next);
+      const result = simulate(next, network);
+      store.setNetwork(network);
+      store.setResult(result);
+      setSimulation({ scenarioId: next.scenario.id, ok: true, runtimeMs: result.runtimeMs, warnings: result.warnings.length });
+    } catch (error) {
+      // Clear stale outputs so the planner cannot show the previous plan's numbers.
+      store.setNetwork(null);
+      store.setResult(null);
+      setSimulation({ scenarioId: next.scenario.id, ok: false, message: error instanceof Error ? error.message : String(error) });
+    }
   }, []);
 
   const capture = useTableCapture(world, commitPlan);
   const { view } = capture;
   const currentSnapshot = confirmed?.scenario.id === world?.scenario.id ? confirmed : null;
+  const currentSimulation = simulation?.scenarioId === world?.scenario.id ? simulation : null;
   const visible = view.readings.filter((reading) => reading.markerId >= 10 && !reading.held);
 
   function downloadPlan() {
@@ -206,7 +227,13 @@ export default function TablePage() {
             </div>
             <Button className="mt-5 w-full" disabled={!view.canConfirm || capture.busy} onClick={capture.confirm}>Confirm plan ↗</Button>
             <Button className="mt-2 w-full" variant="outline" disabled={!currentSnapshot} onClick={downloadPlan}>Export confirmed JSON</Button>
-            <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">Confirm writes to P1’s shared store. P3’s simulation is not connected yet; no metrics are invented here.</p>
+            {currentSimulation && !currentSimulation.ok
+              ? <p role="alert" className="mt-4 text-[11px] leading-relaxed text-destructive">Simulation failed for the confirmed plan: {currentSimulation.message} The plan was saved; no results are shown.</p>
+              : <p role="status" className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+                {currentSimulation
+                  ? `Last confirmed plan simulated in ${Math.round(currentSimulation.runtimeMs)} ms${currentSimulation.warnings ? ` with ${currentSimulation.warnings} model warning${currentSimulation.warnings === 1 ? '' : 's'}` : ''}. Open the planner for the outputs: illustrative results from a synthetic scenario.`
+                  : 'Confirm writes the plan to the shared store and runs the simulation once. Moving markers alone never reruns it.'}
+              </p>}
             <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">Two markers support overhead views. Four-point calibration handles the table plane in a fixed angled view; the 3D layer remains orthographic.</p>
           </aside>
         </div>
