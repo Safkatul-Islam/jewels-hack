@@ -10,7 +10,6 @@
 // to SCENARIOS below. That is the whole job — the picker, the store and the
 // validator pick it up for free.
 
-import { PLACEHOLDER_WORLD } from '@/lib/placeholderWorld';
 import type { WorldState } from '@/lib/sim/types';
 
 export interface ScenarioEntry {
@@ -24,34 +23,20 @@ export interface ScenarioEntry {
 }
 
 export const SCENARIOS: ScenarioEntry[] = [
-  // ⚠️ TEMPORARY — remove this entry, and lib/placeholderWorld.ts with it, as
-  // soon as the real scenario lands. See INTEGRATION 1 in docs/03-WORKPLAN.md.
   {
-    id: 'placeholder',
-    name: 'Placeholder corridor',
-    event: 'Not a real scenario',
-    blurb: 'Dev stand-in until the real scenario lands. Do not demo this.',
-    load: async () => PLACEHOLDER_WORLD,
+    id: 'rosebowl',
+    name: 'Rose Bowl — illustrative',
+    event: 'Major stadium event — planning sandbox',
+    blurb: 'Synthetic corridor, demand and businesses; not an official event plan.',
+    load: () => import('@/fixtures/scenario-rosebowl.json').then((module) => module.default),
   },
-
-  // ⬇ P4: uncomment each entry as its fixture is pushed. A dynamic import of a
-  // file that does not exist yet fails the BUILD, not just the page, so these
-  // stay commented until the JSON is committed.
-  //
-  // {
-  //   id: 'rosebowl',
-  //   name: 'Rose Bowl, Pasadena',
-  //   event: 'LA28 Olympic football — semifinal',
-  //   blurb: '90,000 seats, no rail station, one residential corridor.',
-  //   load: () => import('@/fixtures/scenario-rosebowl.json').then((m) => m.default),
-  // },
-  // {
-  //   id: 'downtown',
-  //   name: '…',
-  //   event: '…',
-  //   blurb: '…',
-  //   load: () => import('@/fixtures/scenario-downtown.json').then((m) => m.default),
-  // },
+  {
+    id: 'downtown',
+    name: 'Downtown arena — illustrative',
+    event: 'Urban arena event — planning sandbox',
+    blurb: 'Synthetic example with rail beside the venue; not a surveyed map.',
+    load: () => import('@/fixtures/scenario-downtown.json').then((module) => module.default),
+  },
 ];
 
 export const DEFAULT_SCENARIO_ID = SCENARIOS[0].id;
