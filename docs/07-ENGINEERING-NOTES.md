@@ -36,14 +36,14 @@ Primary implementation references checked 2026-11-14:
 - https://git-scm.com/docs/git-add — stage one exact file, then inspect the index.
 - https://git-scm.com/docs/git-commit — a normal commit records staged changes.
 
-## Decisions awaiting owner review
+## Owner-approved integration
 
-The existing uncommitted P4 implementation uses an isolated Vite preview, a temporary
-structural adapter while P1 authors shared types, and a plain Three.js overlay. These
-choices differ from the planned Next.js/React Three Fiber wiring. Four-point planar
-calibration is an additional geometry feature for angled cameras. They were surfaced
-together for owner review. No further implementation, integration or implementation
-commits should proceed on those choices until the owner answers.
+The owner chose **align with Next.js/R3F now**, replacing the standalone Vite preview
+and temporary types. The owner separately approved merging P1's `peter` branch into
+`p4-vision-table` locally, retaining our owner-specified AGENTS.md/CLAUDE.md. The merge
+is `9c61e6a`; it is a merge checkpoint, while subsequent feature commits remain one
+file each. No push is authorized. Four-point planar calibration remains available
+for angled table views and does not claim full AR pose estimation.
 
 The hardware/software camera route below remains a researched candidate, not an approved
 installation or a verified device connection. Architectural and other consequential
@@ -69,17 +69,34 @@ the laptop's LAN HTTP URL from the phone does not forward its camera to the lapt
 
 ## P4 library and validation
 
-Primary source: https://github.com/damianofalcioni/js-aruco2 and the installed package
-source under the isolated tools/p4 dependency directory. Package version: 2.0.0 (MIT).
+Primary source: https://github.com/damianofalcioni/js-aruco2 and the installed root
+package source. Package version: 2.0.0 (MIT).
 Verified `AR.Detector`, `dictionaryName`, `maxHammingDistance`, `AR.Dictionary.generateSVG`,
 and marker corner/Hamming fields before using them. Generator and detector use the same
 dictionary. The confidence calculation is a heuristic, not a probability.
 
-`npm --prefix tools/p4 test` passed nine test groups, including actual detector round
-trips for all nine supported IDs at two orientations. `npm --prefix tools/p4 run build`
-passed. Browser checks exercised generated input, movement, Confirm, scenario switching,
-four-point calibration, the optional primitive overlay and print-pack navigation.
+Current commands are the root `npm run test:vision`, `typecheck`, `lint` and `build`.
+Ten test groups pass, including actual detector round trips for all nine IDs at two
+orientations and asynchronous camera replacement/late-stream cleanup. The Next.js
+production build includes `/table`. Browser checks exercise the integrated detector,
+movement, R3F primitives, Confirm/shared planner navigation and calibration controls.
 These checks do not establish physical camera or lighting performance.
+
+Primary sources checked for the approved framework integration:
+
+| Source | Finding and implementation |
+| --- | --- |
+| https://r3f.docs.pmnd.rs/getting-started/installation | Fiber 9 pairs with React 19. Installed Fiber 9.8.2 and Three 0.182.0 against P1's React 19.1; declarative Canvas owns the render lifecycle. |
+| https://nextjs.org/docs/15/app/api-reference/directives/use-client | Camera hooks and interactive table components are client boundaries. Browser APIs run in effects/event handlers. |
+| https://nextjs.org/docs/15/app/guides/lazy-loading | `dynamic(..., { ssr: false })` belongs in a client component. The optional R3F scene is loaded this way. |
+| https://eslint.org/docs/latest/use/configure/ignore | Global ignores exclude the retired generated Vite artifacts from root source linting. |
+
+Runtime shared types now come directly from P1's `lib/sim/types.ts`, defaults from
+`lib/pieces.ts`, and map coordinates from `lib/transform.ts`. Confirm writes to the
+existing store and clears stale results; engine integration remains P1/P3 work.
+Automatic approval review rejected recursive deletion of retired `tools/p4/` artifacts
+because it could remove uncommitted work. The safer resolution is retaining and
+ignoring that unused local directory, without retrying or bypassing the rejection.
 
 ## Instruction-file acceptance
 
