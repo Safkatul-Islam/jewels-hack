@@ -1,0 +1,1599 @@
+{
+  "version": 1,
+  "scenario": {
+    "id": "scenario-demo",
+    "name": "Demo Corridor (synthetic)",
+    "event": "engine test fixture — not a real venue",
+    "blurb": "Synthetic placeholder scenario for exercising lib/sim/* end to end."
+  },
+  "bbox": {
+    "minX": -150,
+    "minY": -150,
+    "maxX": 900,
+    "maxY": 750
+  },
+  "basemap": {
+    "kind": "grid",
+    "spacingM": 150
+  },
+  "venue": {
+    "pos": {
+      "x": 0,
+      "y": 300
+    },
+    "name": "Demo Venue",
+    "capacity": 90000,
+    "locked": true
+  },
+  "anchors": [
+    {
+      "id": "anchor-bus",
+      "name": "Demo Transit Hub",
+      "pos": {
+        "x": 750,
+        "y": 300
+      },
+      "mode": "bus",
+      "capacityPerHour": 12000,
+      "arrivalShare": 0.6
+    },
+    {
+      "id": "anchor-parking",
+      "name": "Demo Parking Lot",
+      "pos": {
+        "x": 750,
+        "y": 150
+      },
+      "mode": "parking",
+      "capacityPerHour": 8000,
+      "arrivalShare": 0.4
+    }
+  ],
+  "baseRoads": [
+    {
+      "id": "h0",
+      "class": "collector",
+      "path": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 150,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "h1",
+      "class": "collector",
+      "path": [
+        {
+          "x": 150,
+          "y": 0
+        },
+        {
+          "x": 300,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "h2",
+      "class": "collector",
+      "path": [
+        {
+          "x": 300,
+          "y": 0
+        },
+        {
+          "x": 450,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "h3",
+      "class": "collector",
+      "path": [
+        {
+          "x": 450,
+          "y": 0
+        },
+        {
+          "x": 600,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "h4",
+      "class": "collector",
+      "path": [
+        {
+          "x": 600,
+          "y": 0
+        },
+        {
+          "x": 750,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "h5",
+      "class": "collector",
+      "path": [
+        {
+          "x": 0,
+          "y": 150
+        },
+        {
+          "x": 150,
+          "y": 150
+        }
+      ]
+    },
+    {
+      "id": "h6",
+      "class": "collector",
+      "path": [
+        {
+          "x": 150,
+          "y": 150
+        },
+        {
+          "x": 300,
+          "y": 150
+        }
+      ]
+    },
+    {
+      "id": "h7",
+      "class": "collector",
+      "path": [
+        {
+          "x": 300,
+          "y": 150
+        },
+        {
+          "x": 450,
+          "y": 150
+        }
+      ]
+    },
+    {
+      "id": "h8",
+      "class": "collector",
+      "path": [
+        {
+          "x": 450,
+          "y": 150
+        },
+        {
+          "x": 600,
+          "y": 150
+        }
+      ]
+    },
+    {
+      "id": "h9",
+      "class": "collector",
+      "path": [
+        {
+          "x": 600,
+          "y": 150
+        },
+        {
+          "x": 750,
+          "y": 150
+        }
+      ]
+    },
+    {
+      "id": "h10",
+      "class": "arterial",
+      "path": [
+        {
+          "x": 0,
+          "y": 300
+        },
+        {
+          "x": 150,
+          "y": 300
+        }
+      ]
+    },
+    {
+      "id": "h11",
+      "class": "arterial",
+      "path": [
+        {
+          "x": 150,
+          "y": 300
+        },
+        {
+          "x": 300,
+          "y": 300
+        }
+      ]
+    },
+    {
+      "id": "h12",
+      "class": "arterial",
+      "path": [
+        {
+          "x": 300,
+          "y": 300
+        },
+        {
+          "x": 450,
+          "y": 300
+        }
+      ]
+    },
+    {
+      "id": "h13",
+      "class": "arterial",
+      "path": [
+        {
+          "x": 450,
+          "y": 300
+        },
+        {
+          "x": 600,
+          "y": 300
+        }
+      ]
+    },
+    {
+      "id": "h14",
+      "class": "arterial",
+      "path": [
+        {
+          "x": 600,
+          "y": 300
+        },
+        {
+          "x": 750,
+          "y": 300
+        }
+      ]
+    },
+    {
+      "id": "h15",
+      "class": "collector",
+      "path": [
+        {
+          "x": 0,
+          "y": 450
+        },
+        {
+          "x": 150,
+          "y": 450
+        }
+      ]
+    },
+    {
+      "id": "h16",
+      "class": "collector",
+      "path": [
+        {
+          "x": 150,
+          "y": 450
+        },
+        {
+          "x": 300,
+          "y": 450
+        }
+      ]
+    },
+    {
+      "id": "h17",
+      "class": "collector",
+      "path": [
+        {
+          "x": 300,
+          "y": 450
+        },
+        {
+          "x": 450,
+          "y": 450
+        }
+      ]
+    },
+    {
+      "id": "h18",
+      "class": "collector",
+      "path": [
+        {
+          "x": 450,
+          "y": 450
+        },
+        {
+          "x": 600,
+          "y": 450
+        }
+      ]
+    },
+    {
+      "id": "h19",
+      "class": "collector",
+      "path": [
+        {
+          "x": 600,
+          "y": 450
+        },
+        {
+          "x": 750,
+          "y": 450
+        }
+      ]
+    },
+    {
+      "id": "h20",
+      "class": "collector",
+      "path": [
+        {
+          "x": 0,
+          "y": 600
+        },
+        {
+          "x": 150,
+          "y": 600
+        }
+      ]
+    },
+    {
+      "id": "h21",
+      "class": "collector",
+      "path": [
+        {
+          "x": 150,
+          "y": 600
+        },
+        {
+          "x": 300,
+          "y": 600
+        }
+      ]
+    },
+    {
+      "id": "h22",
+      "class": "collector",
+      "path": [
+        {
+          "x": 300,
+          "y": 600
+        },
+        {
+          "x": 450,
+          "y": 600
+        }
+      ]
+    },
+    {
+      "id": "h23",
+      "class": "collector",
+      "path": [
+        {
+          "x": 450,
+          "y": 600
+        },
+        {
+          "x": 600,
+          "y": 600
+        }
+      ]
+    },
+    {
+      "id": "h24",
+      "class": "collector",
+      "path": [
+        {
+          "x": 600,
+          "y": 600
+        },
+        {
+          "x": 750,
+          "y": 600
+        }
+      ]
+    },
+    {
+      "id": "v25",
+      "class": "local",
+      "path": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 150
+        }
+      ]
+    },
+    {
+      "id": "v26",
+      "class": "local",
+      "path": [
+        {
+          "x": 0,
+          "y": 150
+        },
+        {
+          "x": 0,
+          "y": 300
+        }
+      ]
+    },
+    {
+      "id": "v27",
+      "class": "local",
+      "path": [
+        {
+          "x": 0,
+          "y": 300
+        },
+        {
+          "x": 0,
+          "y": 450
+        }
+      ]
+    },
+    {
+      "id": "v28",
+      "class": "local",
+      "path": [
+        {
+          "x": 0,
+          "y": 450
+        },
+        {
+          "x": 0,
+          "y": 600
+        }
+      ]
+    },
+    {
+      "id": "v29",
+      "class": "local",
+      "path": [
+        {
+          "x": 150,
+          "y": 0
+        },
+        {
+          "x": 150,
+          "y": 150
+        }
+      ]
+    },
+    {
+      "id": "v30",
+      "class": "local",
+      "path": [
+        {
+          "x": 150,
+          "y": 150
+        },
+        {
+          "x": 150,
+          "y": 300
+        }
+      ]
+    },
+    {
+      "id": "v31",
+      "class": "local",
+      "path": [
+        {
+          "x": 150,
+          "y": 300
+        },
+        {
+          "x": 150,
+          "y": 450
+        }
+      ]
+    },
+    {
+      "id": "v32",
+      "class": "local",
+      "path": [
+        {
+          "x": 150,
+          "y": 450
+        },
+        {
+          "x": 150,
+          "y": 600
+        }
+      ]
+    },
+    {
+      "id": "v33",
+      "class": "local",
+      "path": [
+        {
+          "x": 300,
+          "y": 0
+        },
+        {
+          "x": 300,
+          "y": 150
+        }
+      ]
+    },
+    {
+      "id": "v34",
+      "class": "local",
+      "path": [
+        {
+          "x": 300,
+          "y": 150
+        },
+        {
+          "x": 300,
+          "y": 300
+        }
+      ]
+    },
+    {
+      "id": "v35",
+      "class": "local",
+      "path": [
+        {
+          "x": 300,
+          "y": 300
+        },
+        {
+          "x": 300,
+          "y": 450
+        }
+      ]
+    },
+    {
+      "id": "v36",
+      "class": "local",
+      "path": [
+        {
+          "x": 300,
+          "y": 450
+        },
+        {
+          "x": 300,
+          "y": 600
+        }
+      ]
+    },
+    {
+      "id": "v37",
+      "class": "local",
+      "path": [
+        {
+          "x": 450,
+          "y": 0
+        },
+        {
+          "x": 450,
+          "y": 150
+        }
+      ]
+    },
+    {
+      "id": "v38",
+      "class": "local",
+      "path": [
+        {
+          "x": 450,
+          "y": 150
+        },
+        {
+          "x": 450,
+          "y": 300
+        }
+      ]
+    },
+    {
+      "id": "v39",
+      "class": "local",
+      "path": [
+        {
+          "x": 450,
+          "y": 300
+        },
+        {
+          "x": 450,
+          "y": 450
+        }
+      ]
+    },
+    {
+      "id": "v40",
+      "class": "local",
+      "path": [
+        {
+          "x": 450,
+          "y": 450
+        },
+        {
+          "x": 450,
+          "y": 600
+        }
+      ]
+    },
+    {
+      "id": "v41",
+      "class": "local",
+      "path": [
+        {
+          "x": 600,
+          "y": 0
+        },
+        {
+          "x": 600,
+          "y": 150
+        }
+      ]
+    },
+    {
+      "id": "v42",
+      "class": "local",
+      "path": [
+        {
+          "x": 600,
+          "y": 150
+        },
+        {
+          "x": 600,
+          "y": 300
+        }
+      ]
+    },
+    {
+      "id": "v43",
+      "class": "local",
+      "path": [
+        {
+          "x": 600,
+          "y": 300
+        },
+        {
+          "x": 600,
+          "y": 450
+        }
+      ]
+    },
+    {
+      "id": "v44",
+      "class": "local",
+      "path": [
+        {
+          "x": 600,
+          "y": 450
+        },
+        {
+          "x": 600,
+          "y": 600
+        }
+      ]
+    },
+    {
+      "id": "v45",
+      "class": "local",
+      "path": [
+        {
+          "x": 750,
+          "y": 0
+        },
+        {
+          "x": 750,
+          "y": 150
+        }
+      ]
+    },
+    {
+      "id": "v46",
+      "class": "local",
+      "path": [
+        {
+          "x": 750,
+          "y": 150
+        },
+        {
+          "x": 750,
+          "y": 300
+        }
+      ]
+    },
+    {
+      "id": "v47",
+      "class": "local",
+      "path": [
+        {
+          "x": 750,
+          "y": 300
+        },
+        {
+          "x": 750,
+          "y": 450
+        }
+      ]
+    },
+    {
+      "id": "v48",
+      "class": "local",
+      "path": [
+        {
+          "x": 750,
+          "y": 450
+        },
+        {
+          "x": 750,
+          "y": 600
+        }
+      ]
+    }
+  ],
+  "pieces": [],
+  "businesses": [
+    {
+      "id": "biz-0",
+      "name": "Demo service shop 0",
+      "pos": {
+        "x": 667.451612809673,
+        "y": 255.96689134836197
+      },
+      "category": "service",
+      "baselineDailyRevenue": 916,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-1",
+      "name": "Demo service shop 1",
+      "pos": {
+        "x": 462.82947880215943,
+        "y": 364.84374172985554
+      },
+      "category": "service",
+      "baselineDailyRevenue": 1129,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-2",
+      "name": "Demo food shop 2",
+      "pos": {
+        "x": 747.471718499437,
+        "y": 191.66538877412677
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1227,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-3",
+      "name": "Demo service shop 3",
+      "pos": {
+        "x": 284.35414182953537,
+        "y": 286.1621138639748
+      },
+      "category": "service",
+      "baselineDailyRevenue": 619,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-4",
+      "name": "Demo food shop 4",
+      "pos": {
+        "x": 471.5154838375747,
+        "y": 38.28225971199572
+      },
+      "category": "food",
+      "baselineDailyRevenue": 819,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-5",
+      "name": "Demo retail shop 5",
+      "pos": {
+        "x": 416.1640600208193,
+        "y": 498.39134502224624
+      },
+      "category": "retail",
+      "baselineDailyRevenue": 1675,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-6",
+      "name": "Demo retail shop 6",
+      "pos": {
+        "x": 326.33270867168903,
+        "y": 20.642627654597163
+      },
+      "category": "retail",
+      "baselineDailyRevenue": 1969,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-7",
+      "name": "Demo retail shop 7",
+      "pos": {
+        "x": 440.0547299720347,
+        "y": 182.49763223342597
+      },
+      "category": "retail",
+      "baselineDailyRevenue": 1306,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-8",
+      "name": "Demo food shop 8",
+      "pos": {
+        "x": 476.91858136095107,
+        "y": 183.0257395002991
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1285,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-9",
+      "name": "Demo service shop 9",
+      "pos": {
+        "x": 853.9494401030242,
+        "y": 70.472597386688
+      },
+      "category": "service",
+      "baselineDailyRevenue": 682,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-10",
+      "name": "Demo food shop 10",
+      "pos": {
+        "x": 365.8348000701517,
+        "y": 13.982623927295208
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1430,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-11",
+      "name": "Demo service shop 11",
+      "pos": {
+        "x": 337.6795022562146,
+        "y": 440.02222483046353
+      },
+      "category": "service",
+      "baselineDailyRevenue": 708,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-12",
+      "name": "Demo food shop 12",
+      "pos": {
+        "x": 632.015357799828,
+        "y": 495.647063460201
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1441,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-13",
+      "name": "Demo food shop 13",
+      "pos": {
+        "x": 564.2437860183418,
+        "y": 339.9901262950152
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1311,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-14",
+      "name": "Demo service shop 14",
+      "pos": {
+        "x": 484.927815226838,
+        "y": 289.61810138076544
+      },
+      "category": "service",
+      "baselineDailyRevenue": 1134,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-15",
+      "name": "Demo food shop 15",
+      "pos": {
+        "x": 543.1699795741588,
+        "y": 334.9967400729656
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1019,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-16",
+      "name": "Demo food shop 16",
+      "pos": {
+        "x": 770.5812208354473,
+        "y": 555.7433270290494
+      },
+      "category": "food",
+      "baselineDailyRevenue": 891,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-17",
+      "name": "Demo retail shop 17",
+      "pos": {
+        "x": 891.6354990657419,
+        "y": 95.9641926176846
+      },
+      "category": "retail",
+      "baselineDailyRevenue": 1619,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-18",
+      "name": "Demo food shop 18",
+      "pos": {
+        "x": 386.3406444620341,
+        "y": 397.95596917159855
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1421,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-19",
+      "name": "Demo food shop 19",
+      "pos": {
+        "x": 481.0824904218316,
+        "y": 490.00447233207524
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1059,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-20",
+      "name": "Demo retail shop 20",
+      "pos": {
+        "x": 320.75276634655893,
+        "y": 458.7800297420472
+      },
+      "category": "retail",
+      "baselineDailyRevenue": 1313,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-21",
+      "name": "Demo food shop 21",
+      "pos": {
+        "x": 644.2584921233356,
+        "y": 301.7675386928022
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1296,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-22",
+      "name": "Demo food shop 22",
+      "pos": {
+        "x": 456.0595415811986,
+        "y": 154.12662747316062
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1495,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-23",
+      "name": "Demo food shop 23",
+      "pos": {
+        "x": 630.2443617489189,
+        "y": 595.5771272163838
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1005,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-24",
+      "name": "Demo food shop 24",
+      "pos": {
+        "x": 544.2392710782588,
+        "y": 256.5870570484549
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1035,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-25",
+      "name": "Demo retail shop 25",
+      "pos": {
+        "x": 841.8196331337094,
+        "y": 198.24453247711062
+      },
+      "category": "retail",
+      "baselineDailyRevenue": 1884,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-26",
+      "name": "Demo food shop 26",
+      "pos": {
+        "x": 434.06683115288615,
+        "y": 201.99119278229773
+      },
+      "category": "food",
+      "baselineDailyRevenue": 955,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-27",
+      "name": "Demo food shop 27",
+      "pos": {
+        "x": 386.5792428236455,
+        "y": 409.54351011663675
+      },
+      "category": "food",
+      "baselineDailyRevenue": 830,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-28",
+      "name": "Demo retail shop 28",
+      "pos": {
+        "x": 641.7187076434493,
+        "y": 133.09463560581207
+      },
+      "category": "retail",
+      "baselineDailyRevenue": 2369,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-29",
+      "name": "Demo food shop 29",
+      "pos": {
+        "x": 801.72493676655,
+        "y": 264.6444039605558
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1388,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-30",
+      "name": "Demo food shop 30",
+      "pos": {
+        "x": 841.4533761516213,
+        "y": 282.36537816002965
+      },
+      "category": "food",
+      "baselineDailyRevenue": 946,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-31",
+      "name": "Demo service shop 31",
+      "pos": {
+        "x": 533.4661406464875,
+        "y": 341.77656339481473
+      },
+      "category": "service",
+      "baselineDailyRevenue": 1106,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-32",
+      "name": "Demo food shop 32",
+      "pos": {
+        "x": 732.944449596107,
+        "y": 32.388481022790074
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1274,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-33",
+      "name": "Demo service shop 33",
+      "pos": {
+        "x": 761.7441615369171,
+        "y": 608.3530095778406
+      },
+      "category": "service",
+      "baselineDailyRevenue": 1112,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-34",
+      "name": "Demo food shop 34",
+      "pos": {
+        "x": 674.7687337454408,
+        "y": 217.8889239113778
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1044,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-35",
+      "name": "Demo food shop 35",
+      "pos": {
+        "x": 876.3058438058943,
+        "y": 361.628346061334
+      },
+      "category": "food",
+      "baselineDailyRevenue": 1056,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-36",
+      "name": "Demo retail shop 36",
+      "pos": {
+        "x": 321.0366332437843,
+        "y": 69.53912129625678
+      },
+      "category": "retail",
+      "baselineDailyRevenue": 2319,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-37",
+      "name": "Demo food shop 37",
+      "pos": {
+        "x": 570.6726573687047,
+        "y": 410.0520936958492
+      },
+      "category": "food",
+      "baselineDailyRevenue": 833,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-38",
+      "name": "Demo retail shop 38",
+      "pos": {
+        "x": 483.24559629894793,
+        "y": 276.33338551968336
+      },
+      "category": "retail",
+      "baselineDailyRevenue": 2177,
+      "catchmentM": 80
+    },
+    {
+      "id": "biz-39",
+      "name": "Demo retail shop 39",
+      "pos": {
+        "x": 415.29681576415896,
+        "y": 398.5752501245588
+      },
+      "category": "retail",
+      "baselineDailyRevenue": 1689,
+      "catchmentM": 80
+    }
+  ],
+  "blocks": [
+    {
+      "id": "block-0",
+      "polygon": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 150,
+          "y": 0
+        },
+        {
+          "x": 150,
+          "y": 150
+        },
+        {
+          "x": 0,
+          "y": 150
+        }
+      ],
+      "population": 370,
+      "accessNodeIds": [
+        "n_0_0",
+        "n_150_0",
+        "n_150_150",
+        "n_0_150"
+      ]
+    },
+    {
+      "id": "block-1",
+      "polygon": [
+        {
+          "x": 0,
+          "y": 150
+        },
+        {
+          "x": 150,
+          "y": 150
+        },
+        {
+          "x": 150,
+          "y": 300
+        },
+        {
+          "x": 0,
+          "y": 300
+        }
+      ],
+      "population": 333,
+      "accessNodeIds": [
+        "n_0_150",
+        "n_150_150",
+        "n_150_300",
+        "n_0_300"
+      ]
+    },
+    {
+      "id": "block-2",
+      "polygon": [
+        {
+          "x": 0,
+          "y": 300
+        },
+        {
+          "x": 150,
+          "y": 300
+        },
+        {
+          "x": 150,
+          "y": 450
+        },
+        {
+          "x": 0,
+          "y": 450
+        }
+      ],
+      "population": 323,
+      "accessNodeIds": [
+        "n_0_300",
+        "n_150_300",
+        "n_150_450",
+        "n_0_450"
+      ]
+    },
+    {
+      "id": "block-3",
+      "polygon": [
+        {
+          "x": 0,
+          "y": 450
+        },
+        {
+          "x": 150,
+          "y": 450
+        },
+        {
+          "x": 150,
+          "y": 600
+        },
+        {
+          "x": 0,
+          "y": 600
+        }
+      ],
+      "population": 259,
+      "accessNodeIds": [
+        "n_0_450",
+        "n_150_450",
+        "n_150_600",
+        "n_0_600"
+      ]
+    },
+    {
+      "id": "block-4",
+      "polygon": [
+        {
+          "x": 150,
+          "y": 0
+        },
+        {
+          "x": 300,
+          "y": 0
+        },
+        {
+          "x": 300,
+          "y": 150
+        },
+        {
+          "x": 150,
+          "y": 150
+        }
+      ],
+      "population": 402,
+      "accessNodeIds": [
+        "n_150_0",
+        "n_300_0",
+        "n_300_150",
+        "n_150_150"
+      ]
+    },
+    {
+      "id": "block-5",
+      "polygon": [
+        {
+          "x": 150,
+          "y": 150
+        },
+        {
+          "x": 300,
+          "y": 150
+        },
+        {
+          "x": 300,
+          "y": 300
+        },
+        {
+          "x": 150,
+          "y": 300
+        }
+      ],
+      "population": 307,
+      "accessNodeIds": [
+        "n_150_150",
+        "n_300_150",
+        "n_300_300",
+        "n_150_300"
+      ]
+    },
+    {
+      "id": "block-6",
+      "polygon": [
+        {
+          "x": 150,
+          "y": 300
+        },
+        {
+          "x": 300,
+          "y": 300
+        },
+        {
+          "x": 300,
+          "y": 450
+        },
+        {
+          "x": 150,
+          "y": 450
+        }
+      ],
+      "population": 412,
+      "accessNodeIds": [
+        "n_150_300",
+        "n_300_300",
+        "n_300_450",
+        "n_150_450"
+      ]
+    },
+    {
+      "id": "block-7",
+      "polygon": [
+        {
+          "x": 150,
+          "y": 450
+        },
+        {
+          "x": 300,
+          "y": 450
+        },
+        {
+          "x": 300,
+          "y": 600
+        },
+        {
+          "x": 150,
+          "y": 600
+        }
+      ],
+      "population": 419,
+      "accessNodeIds": [
+        "n_150_450",
+        "n_300_450",
+        "n_300_600",
+        "n_150_600"
+      ]
+    },
+    {
+      "id": "block-8",
+      "polygon": [
+        {
+          "x": 300,
+          "y": 0
+        },
+        {
+          "x": 450,
+          "y": 0
+        },
+        {
+          "x": 450,
+          "y": 150
+        },
+        {
+          "x": 300,
+          "y": 150
+        }
+      ],
+      "population": 459,
+      "accessNodeIds": [
+        "n_300_0",
+        "n_450_0",
+        "n_450_150",
+        "n_300_150"
+      ]
+    },
+    {
+      "id": "block-9",
+      "polygon": [
+        {
+          "x": 300,
+          "y": 150
+        },
+        {
+          "x": 450,
+          "y": 150
+        },
+        {
+          "x": 450,
+          "y": 300
+        },
+        {
+          "x": 300,
+          "y": 300
+        }
+      ],
+      "population": 375,
+      "accessNodeIds": [
+        "n_300_150",
+        "n_450_150",
+        "n_450_300",
+        "n_300_300"
+      ]
+    },
+    {
+      "id": "block-10",
+      "polygon": [
+        {
+          "x": 300,
+          "y": 300
+        },
+        {
+          "x": 450,
+          "y": 300
+        },
+        {
+          "x": 450,
+          "y": 450
+        },
+        {
+          "x": 300,
+          "y": 450
+        }
+      ],
+      "population": 254,
+      "accessNodeIds": [
+        "n_300_300",
+        "n_450_300",
+        "n_450_450",
+        "n_300_450"
+      ]
+    },
+    {
+      "id": "block-11",
+      "polygon": [
+        {
+          "x": 300,
+          "y": 450
+        },
+        {
+          "x": 450,
+          "y": 450
+        },
+        {
+          "x": 450,
+          "y": 600
+        },
+        {
+          "x": 300,
+          "y": 600
+        }
+      ],
+      "population": 202,
+      "accessNodeIds": [
+        "n_300_450",
+        "n_450_450",
+        "n_450_600",
+        "n_300_600"
+      ]
+    }
+  ],
+  "personas": [
+    {
+      "id": "persona-1",
+      "name": "Dana Ruiz",
+      "role": "has lived on the corridor for 20 years",
+      "pos": {
+        "x": 150,
+        "y": 0
+      },
+      "kind": "resident"
+    },
+    {
+      "id": "persona-2",
+      "name": "Marcus Lee",
+      "role": "owns a corner grocery near the transit hub",
+      "pos": {
+        "x": 600,
+        "y": 300
+      },
+      "kind": "business_owner"
+    },
+    {
+      "id": "persona-3",
+      "name": "Priya Nair",
+      "role": "runs a coffee shop two blocks from the venue",
+      "pos": {
+        "x": 300,
+        "y": 300
+      },
+      "kind": "business_owner"
+    },
+    {
+      "id": "persona-4",
+      "name": "Sam Okafor",
+      "role": "commutes through the corridor on event days",
+      "pos": {
+        "x": 450,
+        "y": 150
+      },
+      "kind": "resident"
+    },
+    {
+      "id": "persona-5",
+      "name": "Grace Kim",
+      "role": "is visiting for the event from out of town",
+      "pos": {
+        "x": 0,
+        "y": 300
+      },
+      "kind": "visitor"
+    },
+    {
+      "id": "persona-6",
+      "name": "Leo Fontaine",
+      "role": "manages the parking lot anchor",
+      "pos": {
+        "x": 750,
+        "y": 150
+      },
+      "kind": "business_owner"
+    }
+  ],
+  "params": {
+    "spectators": 88000,
+    "sampleAgents": 2000,
+    "residentTrips": 4200,
+    "arrivalWindowMin": 180,
+    "egressWindowMin": 60,
+    "seed": 42,
+    "ticksPerMin": 1,
+    "conversionRate": 0.08,
+    "avgTicket": {
+      "food": 14,
+      "retail": 22,
+      "service": 18
+    },
+    "exclusionRadiusM": 150
+  }
+}

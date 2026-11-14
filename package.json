@@ -1,0 +1,19 @@
+{
+  "name": "arroyo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sim": "tsx scripts/sim.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:business": "tsx scripts/test-business.ts",
+    "test:network": "tsx scripts/test-network.ts",
+    "test:simulate": "tsx scripts/test-simulate.ts",
+    "test": "npm run typecheck && npm run test:business && npm run test:network && npm run test:simulate"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
