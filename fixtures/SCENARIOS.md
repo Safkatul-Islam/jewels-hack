@@ -10,10 +10,11 @@ neither is an official event plan, surveyed map, or validated forecast.
   anchor beside the venue and a smaller population. It exercises scenario-dependent
   distances and camera calibration without inventing another real venue's data.
 - Each road is one segment. Intersections share identical endpoint coordinates.
-- `accessNodeIds` is intentionally empty: the contract gives P3 ownership of node IDs
-  but defines no naming scheme. P3 must attach each block to adjacent/nearest road
-  nodes in `buildNetwork`, or agree an ID convention and regenerate these lists.
-  **Do not interpret an empty list as a blocked block.**
+- `accessNodeIds` lists each block's four corner junctions, named with P3's `snapKey`
+  convention from `lib/sim/network.ts` (`n_{x}_{y}`, 0.5 m snap). The generator
+  duplicates that naming, and `npm run test:vision` fails if any ID is not a node that
+  `buildNetwork` creates. If P3 changes the scheme, update the generator and regenerate.
+  The engine skips a block with an empty list; **empty never means blocked.**
 - Scenario descriptions label assumptions; neither fixture claims LA28 transport
   arrangements, exact capacity, official closures, or real business revenues.
 - Marker IDs are common across scenarios. Printed pieces use capacities appropriate
