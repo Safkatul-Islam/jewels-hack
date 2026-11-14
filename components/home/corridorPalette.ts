@@ -23,3 +23,29 @@ export const NIGHT = {
   resident: '#51c672', // --pop-resident     oklch(0.740 0.160 150)
   business: '#fca942', // --pop-business     oklch(0.800 0.150 68)
 } as const;
+
+/**
+ * The seven piece kinds, from the --piece-* tokens (dark-theme values, since
+ * the landing page is dark in both themes).
+ *
+ * On this page they are used SPARINGLY — a thin top edge on a solid, and the
+ * colour of the light a facility throws — never as a fill. Seven saturated
+ * fills would break the rule that the three population colours are the only
+ * saturated things on the page.
+ */
+export const PIECE = {
+  shuttle: '#39a3ff', // --piece-shuttle
+  parking: '#9a88e1', // --piece-parking
+  vendor: '#fca942', // --piece-vendor
+  ped: '#51c672', // --piece-ped
+  bike: '#31c8c9', // --piece-bike
+  closure: '#fc5855', // --piece-closure
+  gate: '#c97adb', // --piece-gate
+} as const;
+
+/** Light colours. Lit means staffed and operating; dark means ordinary city. */
+export const LAMP = {
+  warm: '#ffb866',
+  cool: '#8fb4d6',
+  clinical: '#dfe8f2',
+} as const;
