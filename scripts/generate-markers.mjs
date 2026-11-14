@@ -1,0 +1,13 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import aruco from 'js-aruco2';
+const { AR } = aruco;
+const dictionary=new AR.Dictionary('ARUCO_MIP_36h12');
+const labels={0:'Venue / calibration A',1:'Arrival / calibration B',10:'Shuttle hub',11:'Park and ride',12:'Vendor village',13:'Pedestrian corridor',14:'Bike valet',15:'Road closure',16:'Security gate'};
+const root=fileURLToPath(new URL('../public/markers/',import.meta.url));mkdirSync(root,{recursive:true});
+for(const id of Object.keys(labels)) writeFileSync(join(root,`marker-${id}.svg`),dictionary.generateSVG(Number(id)));
+const cards=Object.entries(labels).map(([id,label])=>`<article><header>ARROYO / TABLE PIECE</header><img src="marker-${id}.svg" alt="Marker ${id}"><h2>${id} — ${label}</h2><p>ARUCO_MIP_36h12 · black square 80 mm · keep white margin clear</p></article>`).join('');
+const html=`<!doctype html><html lang="en"><meta charset="utf-8"><title>ARROYO printable markers</title><style>@page{size:A4;margin:12mm}body{font:14px Arial;color:#000;background:#fff;margin:0}nav{padding:20px}article{width:170mm;min-height:250mm;box-sizing:border-box;text-align:center;padding:20mm 10mm;break-after:page}header{letter-spacing:3px;font-size:11px}img{display:block;width:100mm;height:100mm;background:white;padding:2mm;margin:20mm auto 8mm;image-rendering:pixelated}h2{font-size:22px}p{font-size:12px}@media print{nav{display:none}}</style><nav><h1>Print at 100% / Actual size</h1><p>A4, one marker per page. Black square: 8 cm, plus a 12 mm white quiet zone. Use matte white paper. Print extra copies of 0 and 1. Test ONE marker before printing all nine.</p><button onclick="print()">Print markers</button></nav>${cards}</html>`;
+writeFileSync(join(root,'index.html'),html);
+console.log('Generated nine SVG markers and an A4 print pack in public/markers/.');
