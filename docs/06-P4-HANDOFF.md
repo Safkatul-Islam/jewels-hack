@@ -3,7 +3,7 @@
 Local branch: `p4-vision-table`. Pushes require explicit owner approval.
 P1's `peter` scaffold was merged locally with owner approval. On 2026-11-14 the owner
 also approved a local merge of `origin/main` at `45352bc` (engine, `/plan` wiring, voice
-advisor, landing page) as `8fb1496`. Nothing after `b543844` has been pushed. The implementation
+advisor, landing page) as `8fb1496`. With owner approval the branch was pushed to `origin/p4-vision-table` through `5faae26`; later commits are local until a new approval. The implementation
 uses the root Next.js app and React Three Fiber; the standalone Vite lab is retired.
 
 ## Run and demonstrate
