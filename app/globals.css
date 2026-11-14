@@ -246,3 +246,61 @@
 .night .svg-label-strong {
   fill: var(--bone);
 }
+
+/* The egress wave drifts outward along the corridor, venue → anchor. It is the
+   only persistent motion on the page, and it is slow on purpose: it should read
+   as a system running, not as a page with an effect.
+
+   Each dot carries its own --dx/--dy (the local spine tangent, fanned sideways)
+   and a negative animation-delay, so the wave is already mid-cycle on first
+   paint and never pulses in unison. `opacity` here multiplies the dot's
+   `fill-opacity`, so turning the animation off leaves the drawing at exactly
+   the weight it was composed at. */
+.night .drift {
+  animation: night-drift var(--dur, 18s) linear infinite;
+}
+
+@keyframes night-drift {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  9% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx, 0), var(--dy, 0));
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .night .drift {
+    animation: none;
+  }
+}
+
+/* The shuttle runs the corridor and comes back — a service, so it reverses
+   rather than teleporting home. Slow enough that you notice it only on the
+   second look, which is the point. */
+.night .shuttle {
+  animation: night-shuttle 30s ease-in-out infinite alternate;
+}
+
+@keyframes night-shuttle {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(var(--sx, 0), var(--sy, 0));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .night .shuttle {
+    animation: none;
+  }
+}

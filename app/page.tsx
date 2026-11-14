@@ -14,6 +14,7 @@
 
 import Link from 'next/link';
 import { CorridorField } from '@/components/home/CorridorField';
+import { CorridorScene } from '@/components/home/CorridorScene';
 
 const GUTTER = 'px-5 sm:px-8 lg:px-12';
 
@@ -64,17 +65,16 @@ export default function Home() {
 
       {/* ---- hero ---- */}
       <section className="relative grid flex-1 items-center overflow-hidden">
-        {/* the field: grid backdrop + corridor drawing */}
+        {/* the field. The grid used to be a CSS background here; it now lives
+            on the ground plane inside the drawing, because a square backdrop
+            grid behind a projected plan reads as two surfaces, not one. */}
         <div
           aria-hidden
-          className="relative aspect-[4/3] max-w-full border-t border-[var(--night-hairline)] bg-[length:68px_68px] bg-center lg:absolute lg:inset-0 lg:aspect-auto lg:border-t-0"
-          style={{
-            backgroundImage:
-              'linear-gradient(to right, var(--night-grid) 1px, transparent 1px),' +
-              'linear-gradient(to bottom, var(--night-grid) 1px, transparent 1px)',
-          }}
+          className="relative aspect-[16/9] max-w-full border-t border-[var(--night-hairline)] lg:absolute lg:inset-0 lg:aspect-auto lg:border-t-0"
         >
-          <CorridorField />
+          <CorridorScene>
+            <CorridorField />
+          </CorridorScene>
         </div>
 
         {/* scrim, so the type sits on near-solid ground over the drawing */}
