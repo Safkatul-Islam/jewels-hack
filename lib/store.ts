@@ -14,6 +14,7 @@ import { DEFAULT_SCENARIO_ID, loadScenario } from '@/lib/scenarios';
 import type {
   Piece,
   PieceKind,
+  RoadNetwork,
   SimResult,
   Vec2,
   Weights,
@@ -45,6 +46,14 @@ export interface PlanStore {
 
   // ---- results ----
   weights: Weights;
+  /**
+   * The regenerated road graph from the last run. The canvas draws THIS, not
+   * world.baseRoads — the seeds are only what exists before buildNetwork has
+   * had a say. Stored rather than recomputed per render because runPlan has to
+   * build it anyway to simulate; buildNetwork is well under a millisecond, so
+   * if this ever gets in the way, recomputing is also fine.
+   */
+  network: RoadNetwork | null;
   result: SimResult | null;
   baseline: SimResult | null;
   compare: boolean;
@@ -65,12 +74,30 @@ export interface PlanStore {
   setPieces: (pieces: Piece[]) => void;
   clearPieces: () => void;
 
+  // ---- scenario furniture: authoring, not planning ----
+  //
+  // The venue and the anchors stay locked and have no mover here on purpose.
+  // They are the ArUco calibration pair (docs/02-CONTRACTS.md): marker 0 and
+  // marker 1 derive scale, rotation and origin from
+  // `distance(venue.pos, anchors[0].pos)`, so moving either of them in the
+  // canvas silently rescales the table mode. WorldState also types
+  // `venue.locked` as the literal `true`.
+  //
+  // Businesses and blocks are different: they carry no marker and nothing in
+  // the engine routes through them, so dragging one is a scenario edit, not a
+  // plan edit. It changes the economics (a shop's catchment moves relative to
+  // the pedestrian heatmap), never the road graph.
+  moveBusiness: (id: string, pos: Vec2) => void;
+  /** `centroid` is the block's new centre; every polygon vertex shifts with it. */
+  moveBlock: (id: string, centroid: Vec2) => void;
+
   // ---- ui ----
   selectPiece: (id: string | null) => void;
   setDragging: (id: string | null) => void;
   armKind: (kind: PieceKind | null) => void;
   setSnapM: (m: number) => void;
   setWeights: (w: Partial<Weights>) => void;
+  setNetwork: (n: RoadNetwork | null) => void;
   setResult: (r: SimResult | null) => void;
   setBaseline: (r: SimResult | null) => void;
   setCompare: (on: boolean) => void;
@@ -89,6 +116,7 @@ export const usePlanStore = create<PlanStore>((set) => ({
   armedKind: null,
 
   weights: { games: 1, livability: 1, economy: 1 },
+  network: null,
   result: null,
   baseline: null,
   compare: false,
@@ -105,6 +133,7 @@ export const usePlanStore = create<PlanStore>((set) => ({
         scenarioId: id,
         loading: false,
         error: null,
+        network: null,
         result: null,
         baseline: null,
         compare: false,
@@ -188,6 +217,37 @@ export const usePlanStore = create<PlanStore>((set) => ({
   clearPieces: () =>
     set((s) => (s.world ? { world: { ...s.world, pieces: [] }, selectedPieceId: null } : s)),
 
+  moveBusiness: (id, pos) =>
+    set((s) =>
+      s.world
+        ? {
+            world: {
+              ...s.world,
+              businesses: s.world.businesses.map((b) => (b.id === id ? { ...b, pos } : b)),
+            },
+          }
+        : s,
+    ),
+
+  moveBlock: (id, centroid) =>
+    set((s) => {
+      if (!s.world) return s;
+      return {
+        world: {
+          ...s.world,
+          blocks: s.world.blocks.map((b) => {
+            if (b.id !== id || b.polygon.length === 0) return b;
+            const n = b.polygon.length;
+            const cx = b.polygon.reduce((sum, p) => sum + p.x, 0) / n;
+            const cy = b.polygon.reduce((sum, p) => sum + p.y, 0) / n;
+            const dx = centroid.x - cx;
+            const dy = centroid.y - cy;
+            return { ...b, polygon: b.polygon.map((p) => ({ x: p.x + dx, y: p.y + dy })) };
+          }),
+        },
+      };
+    }),
+
   selectPiece: (id) => set({ selectedPieceId: id }),
   armKind: (armedKind) => set({ armedKind }),
   setDragging: (id) => set({ draggingPieceId: id }),
@@ -195,6 +255,7 @@ export const usePlanStore = create<PlanStore>((set) => ({
 
   setWeights: (w) => set((s) => ({ weights: { ...s.weights, ...w } })),
 
+  setNetwork: (network) => set({ network }),
   setResult: (result) => set({ result }),
   setBaseline: (baseline) => set({ baseline }),
   setCompare: (compare) => set({ compare }),

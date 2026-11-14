@@ -6,37 +6,22 @@
 //
 // It is deliberately dark in both themes — see the .night block in globals.css.
 // `/` is a planning console; `/plan` is the app screen. They share the drawing
-// language (grid, hairline roads, venue circle, anchor squares, scale bar) so
-// the two pages read as one object.
+// language so the two pages read as one object.
 //
-// Numbers here come from the default scenario's spec: 88,000 spectators and
-// 4,200 resident trips are SimParams defaults, 40 is the business count.
+// The accent (--night-accent, set by AccentProvider) runs through the chrome
+// here and through the model's own lighting, so picking a swatch visibly
+// changes the page. What it does NOT move is the three population colours
+// inside the drawing — spectator blue, resident green, business amber encode
+// which population is which, and /plan uses the same three.
 
 import Link from 'next/link';
 import { CorridorField } from '@/components/home/CorridorField';
+import { CorridorScene } from '@/components/home/CorridorScene';
+import { AccentProvider } from '@/components/home/AccentProvider';
+import { AccentSelector } from '@/components/home/AccentSelector';
+import { StackLoop } from '@/components/home/StackLoop';
 
 const GUTTER = 'px-5 sm:px-8 lg:px-12';
-
-const POPULATIONS = [
-  {
-    name: 'Spectators',
-    value: '88,000',
-    note: 'out in 60 min',
-    color: 'var(--pop-spectator)',
-  },
-  {
-    name: 'Residents',
-    value: '4,200',
-    note: 'trips through it',
-    color: 'var(--pop-resident)',
-  },
-  {
-    name: 'Businesses',
-    value: '40',
-    note: 'on the corridor',
-    color: 'var(--pop-business)',
-  },
-];
 
 const READOUT = [
   { label: 'Scenario', value: 'Rose Bowl / LA28' },
@@ -46,11 +31,15 @@ const READOUT = [
 
 export default function Home() {
   return (
-    <main className="night flex min-h-dvh flex-col">
+    <AccentProvider>
+      <main className="night flex min-h-dvh flex-col">
       {/* ---- instrument chrome ---- */}
       <header className="relative z-20 border-b border-[var(--night-hairline)]">
         <div className={`${GUTTER} flex flex-wrap items-center gap-x-4 gap-y-2 py-3.5`}>
-          <p className="text-sm font-semibold tracking-[0.26em] uppercase">Arroyo</p>
+          <p className="flex items-center gap-2.5 text-sm font-semibold tracking-[0.26em] uppercase">
+            <span aria-hidden className="size-1.5 rounded-full bg-[var(--night-accent)]" />
+            Arroyo
+          </p>
           <dl className="ml-auto flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] tracking-[0.14em] text-[var(--night-dim)] uppercase tabular-nums">
             {READOUT.map((r) => (
               <div key={r.label} className="flex gap-1.5">
@@ -59,22 +48,30 @@ export default function Home() {
               </div>
             ))}
           </dl>
+          <div className="ml-auto flex items-center gap-4 lg:ml-5">
+            <span aria-hidden className="hidden h-4 w-px bg-[var(--night-hairline)] lg:block" />
+            <AccentSelector />
+          </div>
         </div>
       </header>
 
       {/* ---- hero ---- */}
-      <section className="relative grid flex-1 items-center overflow-hidden">
-        {/* the field: grid backdrop + corridor drawing */}
+      {/* `grid-cols-[minmax(0,1fr)]` is load-bearing. An `auto` grid track
+          sizes to its item's MAX-content, and the ticker's track is one long
+          unwrapped line — so the copy column grew to 488px inside a 375px
+          phone and the paragraph was clipped rather than wrapped. The
+          minmax(0,...) lets the track refuse to grow past the container. */}
+      <section className="relative grid flex-1 grid-cols-[minmax(0,1fr)] items-center overflow-hidden">
+        {/* the field. The grid used to be a CSS background here; it now lives
+            on the ground plane inside the drawing, because a square backdrop
+            grid behind a projected plan reads as two surfaces, not one. */}
         <div
           aria-hidden
-          className="relative aspect-[4/3] max-w-full border-t border-[var(--night-hairline)] bg-[length:68px_68px] bg-center lg:absolute lg:inset-0 lg:aspect-auto lg:border-t-0"
-          style={{
-            backgroundImage:
-              'linear-gradient(to right, var(--night-grid) 1px, transparent 1px),' +
-              'linear-gradient(to bottom, var(--night-grid) 1px, transparent 1px)',
-          }}
+          className="relative aspect-[16/9] max-w-full border-t border-[var(--night-hairline)] lg:absolute lg:inset-0 lg:aspect-auto lg:border-t-0"
         >
-          <CorridorField />
+          <CorridorScene>
+            <CorridorField />
+          </CorridorScene>
         </div>
 
         {/* scrim, so the type sits on near-solid ground over the drawing */}
@@ -90,68 +87,57 @@ export default function Home() {
         />
 
         <div
-          className={`${GUTTER} relative z-10 order-first flex max-w-2xl flex-col gap-7 py-10 lg:order-none lg:py-16`}
+          className={`${GUTTER} relative z-10 order-first flex min-w-0 max-w-2xl flex-col gap-7 py-10 lg:order-none lg:py-16`}
         >
-          <p className="flex items-center gap-2.5 font-mono text-[10px] tracking-[0.22em] text-[var(--night-dim)] uppercase">
-            <span aria-hidden className="h-px w-6 bg-[var(--night-hairline)]" />
+          <p className="flex items-center gap-2.5 font-mono text-[10px] tracking-[0.22em] text-[var(--night-accent)] uppercase">
+            <span aria-hidden className="h-px w-6 bg-[var(--night-accent)] opacity-70" />
             Last-mile planning sandbox
           </p>
 
           <h1 className="text-[clamp(2.1rem,5.4vw,4.2rem)] leading-[0.99] font-medium tracking-[-0.035em] text-balance">
             Cities plan the stadium.{' '}
-            <span className="text-[var(--night-dim)]">Nobody plans the mile around it.</span>
+            <span
+              style={{
+                color: 'color-mix(in oklab, var(--night-accent) 42%, var(--night-dim))',
+              }}
+            >
+              Nobody plans the mile around it.
+            </span>
           </h1>
 
-          <p className="max-w-[34rem] text-[0.975rem] leading-relaxed font-light text-[var(--night-dim)]">
-            Ninety thousand people arrive over three hours and leave in one, through a corridor
-            that is somebody&rsquo;s neighbourhood. Place the shuttle hubs, park-and-rides, vendor
-            villages and closures &mdash; the network regenerates, and{' '}
+          <p className="max-w-[30rem] text-[1.0625rem] leading-relaxed font-light text-[var(--night-dim)]">
+            Ninety thousand people leave in an hour, through somebody&rsquo;s neighbourhood.
+            Build the last mile &mdash;{' '}
             <strong className="font-normal text-[var(--bone)]">
-              you see what your plan costs each of them.
+              and see what your plan costs each of them.
             </strong>
           </p>
 
           <div className="flex flex-wrap items-center gap-5">
             <Link
               href="/plan"
-              className="inline-flex items-center gap-3 rounded-[2px] border border-[var(--bone)] px-5 py-3 font-mono text-xs tracking-[0.16em] uppercase transition-colors hover:bg-[var(--bone)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-[var(--pop-spectator)]"
+              className="inline-flex items-center gap-3 rounded-[2px] border border-[var(--night-accent)] px-5 py-3 font-mono text-xs tracking-[0.16em] text-[var(--night-accent)] uppercase transition-colors hover:bg-[var(--night-accent)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-[var(--night-accent)]"
             >
               Open the planner
               <svg viewBox="0 0 13 9" fill="none" aria-hidden className="h-[9px] w-[13px]">
                 <path d="M0 4.5h11M8 1l3.5 3.5L8 8" stroke="currentColor" strokeWidth={1.2} />
               </svg>
             </Link>
-            <span className="font-mono text-[10px] tracking-[0.13em] text-[var(--night-dim)] uppercase">
-              No optimal plan &mdash; only whose plan it is
-            </span>
+          </div>
+
+          {/* Built with — under the call to action, inside the copy column,
+              the way the Marketeer and Doppel heroes carry theirs. It is held
+              to the column's width on purpose: run full-bleed it reads as a
+              footer strip, and this page has no footer. */}
+          <div className="w-full min-w-0 max-w-md">
+            <p className="mb-2.5 font-mono text-[10px] tracking-[0.18em] text-[var(--night-accent)] uppercase">
+              Built with
+            </p>
+            <StackLoop />
           </div>
         </div>
       </section>
-
-      {/* ---- the three populations ---- */}
-      <section className="relative z-20 border-t border-[var(--night-hairline)]">
-        <dl
-          className={`${GUTTER} grid gap-x-7 gap-y-4 py-4.5`}
-          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}
-        >
-          {POPULATIONS.map((p) => (
-            <div key={p.name} className="flex min-w-0 items-baseline gap-2.5">
-              <span
-                aria-hidden
-                className="size-[7px] shrink-0 -translate-y-px rounded-full"
-                style={{ background: p.color }}
-              />
-              <dt className="font-mono text-[10px] tracking-[0.16em] text-[var(--night-dim)] uppercase">
-                {p.name}
-              </dt>
-              <dd className="ml-auto text-sm tabular-nums">
-                {p.value}{' '}
-                <span className="font-mono text-[10px] text-[var(--night-dim)]">{p.note}</span>
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-    </main>
+      </main>
+    </AccentProvider>
   );
 }

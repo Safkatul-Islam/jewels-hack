@@ -22,6 +22,9 @@ export interface ScenarioEntry {
   load: () => Promise<unknown>;
 }
 
+// The entries' name/event/blurb are what the picker shows *before* the JSON is
+// fetched, so they are deliberately duplicated from each fixture's own
+// `scenario` block rather than read out of it. Keep them in step with the file.
 export const SCENARIOS: ScenarioEntry[] = [
   {
     id: 'rosebowl',

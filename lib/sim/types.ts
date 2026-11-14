@@ -167,6 +167,16 @@ export interface Metrics {
   localCapturePct: number;
   businessesNetPositive: number;
   crowdPeakPerM2: number;
+  /**
+   * Added by P3 (optional, so the frozen contract is only widened — see the note
+   * at the top of this file). The PRD's
+   * `economy = mean(localCapture, businessesNetPositive_normalised)` needs a 0-100
+   * version of `businessesNetPositive`, and that needs the total business count,
+   * which `scorePlan(m, weights)` never receives. `simulate()` fills this in as
+   * `businessesNetPositive / businesses.length * 100`; `scorePlan()` falls back to
+   * clamping the raw count when it is absent (hand-built mock metrics, say).
+   */
+  businessesNetPositivePct?: number;
 }
 
 export interface Heatmap {
