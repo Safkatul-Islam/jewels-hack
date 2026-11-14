@@ -206,6 +206,26 @@
 }
 
 /* ============================================================
+   The instrument's accent.
+
+   These live on :root, NOT inside .night, and that placement is
+   load-bearing. AccentProvider sets them as an inline style on
+   <html>; a declaration inside .night would sit on a DESCENDANT of
+   <html>, and a descendant's own declaration beats an inherited
+   value, so the picker would silently do nothing to anything styled
+   in CSS. (It would still relight the 3D model, which reads the
+   value from React rather than from CSS — which is exactly the sort
+   of half-working that takes a while to spot.)
+
+   This is the value before hydration and if JavaScript never arrives.
+   ============================================================ */
+
+:root {
+  --night-accent: oklch(0.80 0.09 230);
+  --night-accent-deep: oklch(0.58 0.09 230);
+}
+
+/* ============================================================
    Night field — the landing page's own surface.
    Deliberately dark in BOTH themes: `/` is a planning console, not an
    app screen. Scoped to .night so it cannot leak into /plan, which
@@ -245,4 +265,89 @@
 }
 .night .svg-label-strong {
   fill: var(--bone);
+}
+
+/* The egress wave drifts outward along the corridor, venue → anchor. It is the
+   only persistent motion on the page, and it is slow on purpose: it should read
+   as a system running, not as a page with an effect.
+
+   Each dot carries its own --dx/--dy (the local spine tangent, fanned sideways)
+   and a negative animation-delay, so the wave is already mid-cycle on first
+   paint and never pulses in unison. `opacity` here multiplies the dot's
+   `fill-opacity`, so turning the animation off leaves the drawing at exactly
+   the weight it was composed at. */
+.night .drift {
+  animation: night-drift var(--dur, 18s) linear infinite;
+}
+
+@keyframes night-drift {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  9% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx, 0), var(--dy, 0));
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .night .drift {
+    animation: none;
+  }
+}
+
+/* The shuttle runs the corridor and comes back — a service, so it reverses
+   rather than teleporting home. Slow enough that you notice it only on the
+   second look, which is the point. */
+.night .shuttle {
+  animation: night-shuttle 30s ease-in-out infinite alternate;
+}
+
+@keyframes night-shuttle {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(var(--sx, 0), var(--sy, 0));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .night .shuttle {
+    animation: none;
+  }
+}
+
+/* The "built with" ticker. One CSS animation, no JavaScript: the track holds
+   the list twice and slides by exactly -50%, so the second copy lands where
+   the first began and the restart is invisible. Any other number of copies
+   and it jumps. */
+.night .stack-loop-track {
+  animation: stack-loop 44s linear infinite;
+}
+
+.night .stack-loop:hover .stack-loop-track {
+  animation-play-state: paused;
+}
+
+@keyframes stack-loop {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .night .stack-loop-track {
+    animation: none;
+  }
 }
