@@ -66,8 +66,8 @@ measured data, validated forecasts, or real stakeholder testimony.
 - Coordinate before editing another owner's files. Shared contract changes must be
   communicated to all affected members; do not rename fields unilaterally.
 - P4 must not replace P1's package files, shared types/store/transform or root routes.
-  The existing `tools/p4/` preview/type adapter/Three.js wiring await owner review before
-  further implementation or integration; do not treat their existence as approval.
+  The owner approved alignment to Next.js/R3F and the local P1 merge. P4 uses `app/table/`,
+  the shared frozen types/store, and R3F; do not recreate a standalone Vite application.
 - P4's first deliverable is a usable scenario. Vision must update planning pieces before
   richer 3D. Respect the workplan's cuts; preserve the simulation and comparison loop.
 
@@ -78,17 +78,19 @@ PowerShell execution policy blocks `npm.ps1`; do not change system policy.
 
 ```text
 node scripts/generate-scenarios.mjs
-npm --prefix tools/p4 ci
-npm --prefix tools/p4 test
-npm --prefix tools/p4 run build
-npm --prefix tools/p4 run markers
-npm --prefix tools/p4 run dev
+npm ci
+npm run typecheck
+npm run lint
+npm run build
+npm run test:vision
+npm run markers
+npm run dev
 git diff --check
 ```
 
-The preview runs at `http://127.0.0.1:5174/`; the printable pack is
-`http://127.0.0.1:5174/markers/index.html`. Root app commands belong to P1: read the
-actual root `package.json` when it arrives. Do not claim nonexistent lint/CI scripts run.
+The Next.js table route is `http://localhost:3000/table`; the printable pack is
+`http://localhost:3000/markers/index.html`. Use the actual port printed by Next.js.
+Root app commands belong to P1; inspect `package.json`. Do not invent lint/CI scripts.
 Use the committed lockfile and existing package manager; preserve reproducible installs.
 
 ## Research before uncertain implementation
@@ -116,8 +118,7 @@ Use the committed lockfile and existing package manager; preserve reproducible i
   Update shared state immutably. Make lifecycle ownership and cleanup explicit.
 - Keep units/conventions explicit: world metres, image pixels, milliseconds/minutes,
   rates and percentages. Convert once at a named boundary; never mix coordinate spaces.
-- Do not maintain two drifting shared contracts. The P4 structural adapter is temporary:
-  verify compatibility when P1's frozen types land, then converge with the owners.
+- Import shared types from `lib/sim/types.ts`; do not maintain parallel vision contracts.
 - Handle empty/loading/error/unsupported states. Errors must identify an actionable cause;
   do not silently substitute mock outputs for failed real processing.
 
