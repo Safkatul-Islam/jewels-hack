@@ -10,7 +10,6 @@
 // to SCENARIOS below. That is the whole job — the picker, the store and the
 // validator pick it up for free.
 
-import { PLACEHOLDER_WORLD } from '@/lib/placeholderWorld';
 import type { WorldState } from '@/lib/sim/types';
 
 export interface ScenarioEntry {
@@ -23,35 +22,24 @@ export interface ScenarioEntry {
   load: () => Promise<unknown>;
 }
 
+// The entries' name/event/blurb are what the picker shows *before* the JSON is
+// fetched, so they are deliberately duplicated from each fixture's own
+// `scenario` block rather than read out of it. Keep them in step with the file.
 export const SCENARIOS: ScenarioEntry[] = [
-  // ⚠️ TEMPORARY — remove this entry, and lib/placeholderWorld.ts with it, as
-  // soon as the real scenario lands. See INTEGRATION 1 in docs/03-WORKPLAN.md.
   {
-    id: 'placeholder',
-    name: 'Placeholder corridor',
-    event: 'Not a real scenario',
-    blurb: 'Dev stand-in until the real scenario lands. Do not demo this.',
-    load: async () => PLACEHOLDER_WORLD,
+    id: 'rosebowl',
+    name: 'Rose Bowl, Pasadena — illustrative',
+    event: 'Major stadium event — planning sandbox',
+    blurb: '88,000 seats, 2.6 km to the rail anchor, one residential corridor.',
+    load: () => import('@/fixtures/scenario-rosebowl.json').then((m) => m.default),
   },
-
-  // ⬇ P4: uncomment each entry as its fixture is pushed. A dynamic import of a
-  // file that does not exist yet fails the BUILD, not just the page, so these
-  // stay commented until the JSON is committed.
-  //
-  // {
-  //   id: 'rosebowl',
-  //   name: 'Rose Bowl, Pasadena',
-  //   event: 'LA28 Olympic football — semifinal',
-  //   blurb: '90,000 seats, no rail station, one residential corridor.',
-  //   load: () => import('@/fixtures/scenario-rosebowl.json').then((m) => m.default),
-  // },
-  // {
-  //   id: 'downtown',
-  //   name: '…',
-  //   event: '…',
-  //   blurb: '…',
-  //   load: () => import('@/fixtures/scenario-downtown.json').then((m) => m.default),
-  // },
+  {
+    id: 'downtown',
+    name: 'Example downtown arena',
+    event: 'Urban arena event — planning sandbox',
+    blurb: '18,000 seats on a tight street grid, rail almost at the door.',
+    load: () => import('@/fixtures/scenario-downtown.json').then((m) => m.default),
+  },
 ];
 
 export const DEFAULT_SCENARIO_ID = SCENARIOS[0].id;

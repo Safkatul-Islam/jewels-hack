@@ -28,6 +28,7 @@ interface Props {
 
 export function PlanCanvas({ onCommit }: Props) {
   const world = usePlanStore((s) => s.world);
+  const network = usePlanStore((s) => s.network);
   const addPiece = usePlanStore((s) => s.addPiece);
   const removePiece = usePlanStore((s) => s.removePiece);
   const rotatePiece = usePlanStore((s) => s.rotatePiece);
@@ -135,8 +136,8 @@ export function PlanCanvas({ onCommit }: Props) {
           }}
         >
           <GridBackdrop bbox={bbox} basemap={world.basemap} t={t} />
-          <RoadLayer roads={world.baseRoads} bbox={bbox} t={t} />
-          <WorldLayer world={world} t={t} />
+          <RoadLayer network={network} roads={world.baseRoads} bbox={bbox} t={t} />
+          <WorldLayer world={world} t={t} onCommit={commit} />
           <PieceLayer pieces={world.pieces} bbox={bbox} t={t} onCommit={commit} />
         </svg>
       )}

@@ -10,7 +10,7 @@
 // P3: `runPlan` below is the single integration point for the engine. It is
 //     called once per committed edit — on drop, not during drag.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { PieceInspector } from '@/components/plan/PieceInspector';
 import { PiecePalette } from '@/components/plan/PiecePalette';
@@ -18,6 +18,8 @@ import { PlanCanvas } from '@/components/plan/PlanCanvas';
 import { ScenarioPicker } from '@/components/plan/ScenarioPicker';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { buildNetwork } from '@/lib/sim/network';
+import { simulate } from '@/lib/sim/simulate';
 import { usePlanStore } from '@/lib/store';
 
 export default function PlanPage() {
@@ -25,29 +27,43 @@ export default function PlanPage() {
   const scenarioId = usePlanStore((s) => s.scenarioId);
   const loading = usePlanStore((s) => s.loading);
   const error = usePlanStore((s) => s.error);
+  const result = usePlanStore((s) => s.result);
   const loadScenarioById = usePlanStore((s) => s.loadScenarioById);
   const clearPieces = usePlanStore((s) => s.clearPieces);
   const pieceCount = usePlanStore((s) => s.world?.pieces.length ?? 0);
-
-  // Proof that the commit path fires, until the engine replaces it. Visible on
-  // purpose: at INTEGRATION 1 the number should be replaced by real metrics, and
-  // if it stops ticking, the wiring broke rather than the engine.
-  const [edits, setEdits] = useState(0);
 
   useEffect(() => {
     if (!world && !loading && !error) void loadScenarioById(scenarioId);
   }, [world, loading, error, scenarioId, loadScenarioById]);
 
+  /**
+   * The engine. Called once per committed edit — on drop, never during a drag
+   * (AGENTS.md §2.7) — and synchronously on the client, so dragging a piece
+   * makes no HTTP request (§2.2).
+   *
+   * The world is read from the store with getState() rather than from the
+   * `world` binding above: the piece layer mutates the store and *then* calls
+   * onCommit inside the same event, so the rendered `world` is still the
+   * pre-drop one at this point. Reading it here is what makes the number change
+   * on the drop that caused it rather than one drop late.
+   */
   const runPlan = useCallback(() => {
-    // ⛔ INTEGRATION 1 (T+2:00) — replace the counter with:
-    //
-    //   const net = buildNetwork(world);
-    //   setResult(simulate(world, net));
-    //
-    // Keep it synchronous and keep it client-side. Dragging a piece must not
-    // make an HTTP request (AGENTS.md §2.2).
-    setEdits((n) => n + 1);
+    const store = usePlanStore.getState();
+    const current = store.world;
+    if (!current) return;
+    const net = buildNetwork(current);
+    // The network is kept, not just consumed: RoadLayer draws it, so the roads
+    // the user sees are the regenerated ones rather than the scenario's seeds.
+    store.setNetwork(net);
+    store.setResult(simulate(current, net));
   }, []);
+
+  // First run for a freshly loaded scenario, so the readout has numbers before
+  // anything is touched — the demo is the numbers *changing*, which needs a
+  // before. Guarded on `result` being null, which loadScenarioById resets.
+  useEffect(() => {
+    if (world && !result) runPlan();
+  }, [world, result, runPlan]);
 
   return (
     <main className="flex h-dvh flex-col overflow-hidden">
@@ -64,7 +80,8 @@ export default function PlanPage() {
         )}
         <div className="ml-auto flex items-center gap-2">
           <span className="text-xs text-muted-foreground tabular-nums">
-            {pieceCount} {pieceCount === 1 ? 'piece' : 'pieces'} · {edits} {edits === 1 ? 'edit' : 'edits'}
+            {pieceCount} {pieceCount === 1 ? 'piece' : 'pieces'}
+            {result && ` · sim ${result.runtimeMs} ms`}
           </span>
           <Button
             size="sm"
@@ -108,18 +125,65 @@ export default function PlanPage() {
 
 /**
  * ⛔ P2 REPLACES THIS with <Dashboard /> from components/dashboard/.
- * It is here so the layout is real and the column widths are settled before the
- * dashboard exists — not as a design.
+ *
+ * Deliberately not a design: no cards, no charts, no sliders, no heatmap. It is
+ * a raw numeric readout of what the engine returned, so that the wiring —
+ * drop a piece → buildNetwork → simulate → store → screen — is visibly working
+ * before the real dashboard exists. Delete the whole function, and its use
+ * above, when components/dashboard/ lands.
  */
 function DashboardSlot() {
+  const result = usePlanStore((s) => s.result);
+  const loading = usePlanStore((s) => s.loading);
+
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
+        Loading scenario…
+      </div>
+    );
+  }
+
+  if (!result) {
+    return (
+      <div className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
+        No result yet.
+      </div>
+    );
+  }
+
+  const m = result.metrics;
+  const rows: { label: string; value: string }[] = [
+    { label: 'Egress median', value: `${m.egressMedianMin.toFixed(1)} min` },
+    { label: 'Egress p90', value: `${m.egressP90Min.toFixed(1)} min` },
+    { label: 'Transit mode share', value: `${m.transitModeSharePct.toFixed(0)} %` },
+    { label: 'Crowd peak', value: `${m.crowdPeakPerM2.toFixed(2)} /m²` },
+    { label: 'Local revenue', value: `$${Math.round(m.localRevenueUsd).toLocaleString('en-US')}` },
+    { label: 'Plan score', value: result.score.total.toFixed(1) },
+  ];
+
   return (
-    <div className="flex h-full flex-col items-start gap-2 rounded-xl border border-dashed p-4">
-      <p className="text-xs font-medium">Dashboard — P2</p>
-      <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Metric cards, score dial, three weight sliders, egress chart, persona panel. Render{' '}
-        <code className="rounded bg-muted px-1">fixtures/mock-result.ts</code> here and do not wait
-        for the engine. Replace this slot in <code className="rounded bg-muted px-1">app/plan/page.tsx</code>.
+    <div className="flex h-full flex-col gap-3 rounded-xl border border-dashed p-4">
+      <p className="text-xs font-medium">
+        Dashboard slot — P2 replaces this with <code className="rounded bg-muted px-1">&lt;Dashboard /&gt;</code>
       </p>
+
+      <dl className="flex flex-col gap-1.5">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-baseline justify-between gap-3">
+            <dt className="text-[11px] text-muted-foreground">{row.label}</dt>
+            <dd className="text-sm tabular-nums">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {result.warnings.length > 0 && (
+        <ul className="flex flex-col gap-1 text-[11px] leading-relaxed text-muted-foreground">
+          {result.warnings.map((w) => (
+            <li key={w}>⚠ {w}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
