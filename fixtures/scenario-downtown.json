@@ -1245,7 +1245,12 @@
         }
       ],
       "population": 220,
-      "accessNodeIds": []
+      "accessNodeIds": [
+        "n_-360_180",
+        "n_-180_180",
+        "n_-180_360",
+        "n_-360_360"
+      ]
     },
     {
       "id": "block-2",
@@ -1268,7 +1273,12 @@
         }
       ],
       "population": 260,
-      "accessNodeIds": []
+      "accessNodeIds": [
+        "n_-180_180",
+        "n_0_180",
+        "n_0_360",
+        "n_-180_360"
+      ]
     },
     {
       "id": "block-3",
@@ -1291,7 +1301,12 @@
         }
       ],
       "population": 300,
-      "accessNodeIds": []
+      "accessNodeIds": [
+        "n_0_180",
+        "n_180_180",
+        "n_180_360",
+        "n_0_360"
+      ]
     },
     {
       "id": "block-4",
@@ -1314,7 +1329,12 @@
         }
       ],
       "population": 340,
-      "accessNodeIds": []
+      "accessNodeIds": [
+        "n_180_180",
+        "n_360_180",
+        "n_360_360",
+        "n_180_360"
+      ]
     },
     {
       "id": "block-5",
@@ -1337,7 +1357,12 @@
         }
       ],
       "population": 220,
-      "accessNodeIds": []
+      "accessNodeIds": [
+        "n_-360_360",
+        "n_-180_360",
+        "n_-180_540",
+        "n_-360_540"
+      ]
     },
     {
       "id": "block-6",
@@ -1360,7 +1385,12 @@
         }
       ],
       "population": 260,
-      "accessNodeIds": []
+      "accessNodeIds": [
+        "n_-180_360",
+        "n_0_360",
+        "n_0_540",
+        "n_-180_540"
+      ]
     },
     {
       "id": "block-7",
@@ -1383,7 +1413,12 @@
         }
       ],
       "population": 300,
-      "accessNodeIds": []
+      "accessNodeIds": [
+        "n_0_360",
+        "n_180_360",
+        "n_180_540",
+        "n_0_540"
+      ]
     },
     {
       "id": "block-8",
@@ -1406,7 +1441,12 @@
         }
       ],
       "population": 340,
-      "accessNodeIds": []
+      "accessNodeIds": [
+        "n_180_360",
+        "n_360_360",
+        "n_360_540",
+        "n_180_540"
+      ]
     },
     {
       "id": "block-9",
@@ -1429,7 +1469,12 @@
         }
       ],
       "population": 220,
-      "accessNodeIds": []
+      "accessNodeIds": [
+        "n_-360_540",
+        "n_-180_540",
+        "n_-180_720",
+        "n_-360_720"
+      ]
     },
     {
       "id": "block-10",
@@ -1452,7 +1497,12 @@
         }
       ],
       "population": 260,
-      "accessNodeIds": []
+      "accessNodeIds": [
+        "n_-180_540",
+        "n_0_540",
+        "n_0_720",
+        "n_-180_720"
+      ]
     },
     {
       "id": "block-11",
@@ -1475,7 +1525,12 @@
         }
       ],
       "population": 300,
-      "accessNodeIds": []
+      "accessNodeIds": [
+        "n_0_540",
+        "n_180_540",
+        "n_180_720",
+        "n_0_720"
+      ]
     },
     {
       "id": "block-12",
@@ -1498,7 +1553,12 @@
         }
       ],
       "population": 340,
-      "accessNodeIds": []
+      "accessNodeIds": [
+        "n_180_540",
+        "n_360_540",
+        "n_360_720",
+        "n_180_720"
+      ]
     }
   ],
   "personas": [
