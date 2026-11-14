@@ -110,6 +110,7 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
     let animation = 0;
     let previousFrame = 0;
     let previousSize = '';
+    let previousSource: CaptureSource | null = null;
 
     function tick(now: number) {
       animation = requestAnimationFrame(tick);
@@ -120,6 +121,12 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
       const detector = detectorRef.current;
       if (!source || !currentWorld || !session || !canvas || !detector || now - previousFrame < 100) return;
       previousFrame = now;
+      // A newly selected source starts clean; only a size change within one source
+      // (for example a camera renegotiating resolution) invalidates calibration.
+      if (source !== previousSource) {
+        previousSource = source;
+        previousSize = '';
+      }
       try {
         const context = canvas.getContext('2d', { willReadFrequently: true });
         if (!context) throw new Error('2D canvas is unavailable.');
