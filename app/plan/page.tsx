@@ -6,7 +6,6 @@
 // the first twenty minutes: CANVAS LEFT, DASHBOARD RIGHT. Please don't rearrange
 // it after T+0:20 — see docs/01-ARCHITECTURE.md.
 //
-// P2: replace <DashboardSlot /> with your <Dashboard /> and delete the slot.
 // P3: `runPlan` below is the single integration point for the engine. It is
 //     called once per committed edit — on drop, not during drag.
 //
@@ -26,6 +25,7 @@ import { useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { ConversationProvider } from '@elevenlabs/react';
 import { AccentProvider } from '@/components/home/AccentProvider';
+import { Dashboard } from '@/components/dashboard/Dashboard';
 import { AccentSelector } from '@/components/home/AccentSelector';
 import { PieceInspector } from '@/components/plan/PieceInspector';
 import { VoiceDock } from '@/components/voice/VoiceDock';
@@ -157,94 +157,11 @@ export default function PlanPage() {
             </section>
 
             <aside className="min-h-0 overflow-y-auto border-l border-[var(--night-hairline)] p-3.5">
-              <DashboardSlot />
+              <Dashboard />
             </aside>
           </div>
         </main>
       </ConversationProvider>
     </AccentProvider>
-  );
-}
-
-/**
- * ⛔ P2 REPLACES THIS with <Dashboard /> from components/dashboard/.
- *
- * Deliberately not a design: no cards, no charts, no sliders, no heatmap. It is
- * a raw numeric readout of what the engine returned, so that the wiring —
- * drop a piece → buildNetwork → simulate → store → screen — is visibly working
- * before the real dashboard exists. Delete the whole function, and its use
- * above, when components/dashboard/ lands.
- */
-function DashboardSlot() {
-  const result = usePlanStore((s) => s.result);
-  const loading = usePlanStore((s) => s.loading);
-
-  if (loading || !result) {
-    return (
-      <p className="font-mono text-[10px] tracking-[0.16em] text-[var(--night-dim)] uppercase">
-        {loading ? 'Loading scenario…' : 'No result yet'}
-      </p>
-    );
-  }
-
-  const m = result.metrics;
-  const rows: { label: string; value: string }[] = [
-    { label: 'Egress median', value: `${m.egressMedianMin.toFixed(1)} min` },
-    { label: 'Egress p90', value: `${m.egressP90Min.toFixed(1)} min` },
-    { label: 'Transit mode share', value: `${m.transitModeSharePct.toFixed(0)} %` },
-    { label: 'Crowd peak', value: `${m.crowdPeakPerM2.toFixed(2)} /m²` },
-    { label: 'Local revenue', value: `$${Math.round(m.localRevenueUsd).toLocaleString('en-US')}` },
-  ];
-
-  return (
-    <div className="flex h-full flex-col gap-5">
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="font-mono text-[10px] tracking-[0.18em] text-[var(--night-accent)] uppercase">
-          Readout
-        </p>
-        <p className="font-mono text-[9px] tracking-[0.12em] text-[var(--night-dim)] uppercase">
-          Slot · P2 replaces
-        </p>
-      </div>
-
-      {/* The score first and large: it is the number the demo is about, and the
-          one the weights will move. */}
-      <div className="flex items-baseline gap-3 border-b border-[var(--night-hairline)] pb-4">
-        <span className="text-[2.75rem] leading-none font-medium tracking-[-0.03em] tabular-nums">
-          {result.score.total.toFixed(1)}
-        </span>
-        <span className="font-mono text-[10px] tracking-[0.16em] text-[var(--night-dim)] uppercase">
-          Plan score
-        </span>
-      </div>
-
-      <dl className="flex flex-col">
-        {rows.map((row) => (
-          <div
-            key={row.label}
-            className="flex items-baseline justify-between gap-3 border-b border-[color-mix(in_oklab,var(--night-hairline),transparent_55%)] py-2"
-          >
-            <dt className="font-mono text-[10px] tracking-[0.14em] text-[var(--night-dim)] uppercase">
-              {row.label}
-            </dt>
-            <dd className="text-sm tabular-nums">{row.value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      {result.warnings.length > 0 && (
-        <ul className="flex flex-col gap-1.5">
-          {result.warnings.map((w) => (
-            <li
-              key={w}
-              className="flex gap-2 font-mono text-[10px] leading-relaxed tracking-[0.06em] text-[var(--night-dim)]"
-            >
-              <span aria-hidden className="text-[var(--piece-closure)]">!</span>
-              {w}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   );
 }
