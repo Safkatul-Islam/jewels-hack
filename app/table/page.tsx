@@ -42,6 +42,7 @@ export default function TablePage() {
   const error = usePlanStore((state) => state.error);
   const loadScenarioById = usePlanStore((state) => state.loadScenarioById);
   const [show3D, setShow3D] = useState(false);
+  const [modelScale, setModelScale] = useState(2);
   const [colors, setColors] = useState<Record<string, string>>({});
   const [confirmed, setConfirmed] = useState<WorldState | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -117,8 +118,8 @@ export default function TablePage() {
                   return (
                     <g key={marker.id}>
                       <polygon points={marker.corners.map((corner) => `${corner.x},${corner.y}`).join(' ')} fill="none" stroke={marker.id < 10 ? '#d6a64c' : '#1b9572'} strokeWidth={3} />
-                      <rect x={point.x - 21} y={point.y - 15} width={42} height={30} fill="#16292a" />
-                      <text x={point.x} y={point.y + 7} textAnchor="middle" fill="white" fontSize={20}>{marker.id}</text>
+                      <rect x={point.x - 21} y={point.y + (show3D ? 42 : -15)} width={42} height={30} fill="#16292a" />
+                      <text x={point.x} y={point.y + (show3D ? 64 : 7)} textAnchor="middle" fill="white" fontSize={20}>{marker.id}</text>
                     </g>
                   );
                 })}
@@ -126,7 +127,7 @@ export default function TablePage() {
                   <g key={index}><circle cx={point.x} cy={point.y} r={8} fill="#d6a64c" /><text x={point.x + 12} y={point.y} fontSize={20} fill="#a47924">{index + 1}</text></g>
                 ))}
               </svg>
-              {show3D && view.source && <MarkerScene markers={view.markers} width={view.width} height={view.height} colors={colors} />}
+              {show3D && view.source && <MarkerScene markers={view.markers} width={view.width} height={view.height} colors={colors} modelScale={modelScale} />}
               {!view.source && (
                 <div className="pointer-events-none absolute inset-0 grid place-content-center p-6 text-center">
                   <p className="text-3xl font-light">Your table, connected.</p>
@@ -156,11 +157,20 @@ export default function TablePage() {
               <Button size="sm" variant="outline" disabled={!world || capture.busy} onClick={() => void capture.loadTest()}>Load marker test</Button>
             </div>
             {view.source === 'test' && (
-              <label className="flex flex-wrap items-center gap-4 border-t bg-muted/50 px-4 py-3 text-xs">
-                Generated test / shuttle position
-                <input aria-label="Test shuttle position" type="range" min={0} max={100} value={capture.testPosition} onChange={(event) => capture.changeTestPosition(Number(event.target.value))} />
-                <span className="text-muted-foreground">Real detector, synthetic input</span>
-              </label>
+              <div className="space-y-3 border-t bg-muted/50 px-4 py-3 text-xs">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-muted-foreground">GENERATED TEST / real detector</span>
+                  <select aria-label="Test piece" className="rounded-md border bg-background px-2 py-1" value={capture.testSettings.markerId} onChange={(event) => capture.changeTestSettings({ markerId: Number(event.target.value) })}>
+                    {Object.entries(MARKER_MAP).filter(([id]) => Number(id) >= 10).map(([id, kind]) => <option key={id} value={id}>{id} / {PIECE_LABELS[kind]}</option>)}
+                  </select>
+                </div>
+                <div className="flex flex-wrap gap-x-5 gap-y-3">
+                  <label className="flex items-center gap-2">Position<input aria-label="Test piece position" type="range" min={0} max={100} value={capture.testSettings.positionPercent} onChange={(event) => capture.changeTestSettings({ positionPercent: Number(event.target.value) })} /></label>
+                  <label className="flex items-center gap-2">Rotation<input aria-label="Test piece rotation" type="range" min={-180} max={180} value={capture.testSettings.rotationDegrees} onChange={(event) => capture.changeTestSettings({ rotationDegrees: Number(event.target.value) })} /><span className="w-9 tabular-nums">{capture.testSettings.rotationDegrees}°</span></label>
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={capture.testSettings.hideMovable} onChange={(event) => capture.changeTestSettings({ hideMovable: event.target.checked })} />Hide test piece</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={capture.testSettings.hideAnchors} onChange={(event) => capture.changeTestSettings({ hideAnchors: event.target.checked })} />Hide calibration markers</label>
+                </div>
+              </div>
             )}
             <div className="flex flex-wrap items-center gap-3 border-t p-4 text-xs">
               <label className="flex flex-col gap-1.5">Calibration
@@ -173,8 +183,12 @@ export default function TablePage() {
               <label className="ml-auto flex items-center gap-2"><input type="checkbox" checked={show3D} onChange={(event) => {
                 if (event.target.checked) setColors(readModelColors());
                 setShow3D(event.target.checked);
-              }} />3D primitives</label>
+              }} />3D models</label>
             </div>
+            {show3D && <label className="flex flex-wrap items-center gap-3 border-t px-4 py-3 text-xs">Model size
+              <input aria-label="3D model size" type="range" min={1} max={2.5} step={0.1} value={modelScale} onChange={(event) => setModelScale(Number(event.target.value))} />
+              <span className="tabular-nums">{modelScale.toFixed(1)}×</span><span className="text-muted-foreground">Stylized orthographic overlay</span>
+            </label>}
             <p role="status" className="min-h-16 border-t px-4 py-3 text-xs leading-relaxed text-muted-foreground">{capture.status}</p>
           </section>
           <aside className="rounded-xl border p-5">
