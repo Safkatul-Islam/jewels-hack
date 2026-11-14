@@ -9,6 +9,7 @@ import { MarkerTracker } from './tracker';
 import { TableSession } from './session';
 import { MARKER_MAP, DICTIONARY, type PixelMarker, type VisionWorld, type Vec2 } from './contracts';
 import { validateWorld } from '../scenarios';
+import { buildNetwork } from '../sim/network';
 import { CameraController } from './camera';
 import { advanceOverlayPose, markerOverlayPose, overlayAtRest, watchContextLoss } from './overlay';
 
@@ -186,7 +187,7 @@ test('Confirm snapshots the draft and refuses stale/missing calibration and out-
   assert.equal(session.process([...anchors,marker(10,9999,300)],700).canConfirm,false);
   session.reset(world());assert.throws(()=>session.confirm());
 });
-test('both committed scenarios have connected 30-node networks, expected populations and no synthetic node-ID guesses',()=>{
+test('both committed scenarios have connected 30-node networks, expected populations and block exits that are real engine junctions',()=>{
   for(const id of ['rosebowl','downtown']){
     const scenario=validateWorld(JSON.parse(readFileSync(new URL(`../../fixtures/scenario-${id}.json`,import.meta.url),'utf8')));
     assert.equal(scenario.businesses.length,40);assert.equal(scenario.blocks.length,12);assert.equal(scenario.personas.length,6);assert.equal(scenario.anchors.length,2);
@@ -197,5 +198,14 @@ test('both committed scenarios have connected 30-node networks, expected populat
     while(queue.length){const current=queue.pop()!;if(seen.has(current))continue;seen.add(current);queue.push(...graph.get(current)!);}
     assert.equal(seen.size,30);for(const anchor of scenario.anchors)assert.ok(seen.has(key(anchor.pos)));
     assert.match(scenario.scenario.blurb,/Synthetic/);
+    // Block exits must be IDs the engine really creates, at the block's own four corners.
+    const nodes=new Map(buildNetwork({...scenario,pieces:[]}).nodes.map(node=>[node.id,node.pos]));
+    for(const block of scenario.blocks){
+      assert.equal(new Set(block.accessNodeIds).size,4);
+      const xs=block.polygon.map((p:Vec2)=>p.x),ys=block.polygon.map((p:Vec2)=>p.y);
+      const cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
+      const nearest=[...nodes].sort((p,q)=>Math.hypot(p[1].x-cx,p[1].y-cy)-Math.hypot(q[1].x-cx,q[1].y-cy)).slice(0,4).map(([id])=>id);
+      assert.deepEqual([...block.accessNodeIds].sort(),nearest.sort(),`${block.id} exits are not its four nearest engine junctions`);
+    }
   }
 });
