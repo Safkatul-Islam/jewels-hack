@@ -8,12 +8,16 @@
 // different tool. A demo that also rearranges the furniture makes it impossible
 // to tell which change did what.
 //
-// This exists because the ArUco table (docs/04-TABLE-MODE.md) needs a printer
-// and the printer is dead. It keeps what the table mode was actually for —
-// moving the infrastructure with your hands, in front of an audience, without
-// a mouse between you and the plan — and drops what the table mode needed:
-// printed markers, a calibration pair, controlled overhead lighting, and a
-// camera mounted above a surface.
+// This exists because the ArUco table (/table, docs/04-TABLE-MODE.md) needs a
+// printer and the printer is dead. The table route is built and merged — this
+// is the second camera route, not its replacement. It keeps what the table mode
+// is actually for — moving the infrastructure with your hands, in front of an
+// audience, without a mouse between you and the plan — and drops what the table
+// mode needs in the room: printed markers, a calibration pair, controlled
+// overhead lighting, and a camera mounted above a surface.
+//
+// The two share lib/vision/ but no code; docs/08-GESTURE-MODE.md says which
+// files belong to which.
 //
 // /plan is untouched. Nothing here is imported by it.
 

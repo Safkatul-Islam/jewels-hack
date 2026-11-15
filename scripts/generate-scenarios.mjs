@@ -3,6 +3,12 @@ import { fileURLToPath } from 'node:url';
 
 // Synthetic planning networks. No coordinates, businesses or demand are survey data.
 const root = new URL('../', import.meta.url);
+// P3's junction naming (snapKey in lib/sim/network.ts): n_{x}_{y}, snapped to 0.5 m.
+// Duplicated because this plain script cannot import TypeScript; the fixture test
+// checks every emitted ID against the nodes buildNetwork actually creates.
+const NODE_SNAP_M = 0.5;
+const snap = (value) => Math.round(value / NODE_SNAP_M) * NODE_SNAP_M;
+const nodeId = (pos) => `n_${snap(pos.x)}_${snap(pos.y)}`;
 export function makeScenario({ id, name, event, step, spectators, railAtDoor }) {
   const point = (column, row) => ({ x: column * step, y: row * step });
   const baseRoads = [];
@@ -40,8 +46,8 @@ export function makeScenario({ id, name, event, step, spectators, railAtDoor }) 
         { x: a.x + 40, y: a.y + 40 }, { x: a.x + step - 40, y: a.y + 40 },
         { x: a.x + step - 40, y: a.y + step - 40 }, { x: a.x + 40, y: a.y + step - 40 },
       ], population: 220 + (index % 4) * 40,
-      // Resolved to actual generated node IDs by P3. See scenario metadata below.
-      accessNodeIds: [],
+      // A block fills one grid cell; residents exit through its four corner junctions.
+      accessNodeIds: [a, point(column + 1, row), point(column + 1, row + 1), point(column, row + 1)].map(nodeId),
     };
   });
   const definitions = [

@@ -48,3 +48,6 @@ next-env.d.ts
 # you). Vendored locally so the demo never depends on conference wifi, ignored
 # here because binaries that large do not belong in a shared repo.
 /public/vision/
+
+# Retired P4 preview artifacts retained locally after Next.js integration
+/tools/p4/

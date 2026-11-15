@@ -26,6 +26,8 @@ const eslintConfig = [
       // `npm run vision:assets`. It is minified third-party glue — linting it
       // buries every real finding under ~45,000 warnings about its internals.
       "public/vision/**",
+      // Retired local preview artifacts; the maintained route is app/table/.
+      "tools/p4/**",
     ],
   },
 ];

@@ -1,14 +1,23 @@
 # Gesture mode — P4's playbook
 
-`/gesture` is the plan canvas driven by two hands in front of a webcam. It replaces the
-ArUco table (`04-TABLE-MODE.md`), which needs a printer we do not have.
+`/gesture` is the plan canvas driven by two hands in front of a webcam.
 
-It keeps what the table mode was for — moving the infrastructure with your hands, in front
-of an audience, with no mouse between you and the plan — and drops what the table mode
-needed: printed markers, a calibration pair, controlled overhead lighting, and a camera
-mounted above a surface. A laptop and its built-in webcam are the whole rig.
+It is the **second** camera route into the plan, not a replacement for the first. The ArUco
+table (`/table`, `04-TABLE-MODE.md`, `06-P4-HANDOFF.md`) is built and merged; what it needs
+is a printer for the markers. This one keeps what the table mode was for — moving the
+infrastructure with your hands, in front of an audience, with no mouse between you and the
+plan — and drops what the table mode needs in the room: printed markers, a calibration
+pair, controlled overhead lighting, and a camera mounted above a surface. A laptop and its
+built-in webcam are the whole rig.
 
-`/plan` is untouched. Nothing in `components/gesture/` or `lib/vision/` is imported by it.
+So pick by what the room allows. With a printer and a table, `/table` reads real objects
+and is the better demo. Without one, `/gesture` needs nothing but the laptop.
+
+The two share `lib/vision/` but no code: `aruco.ts`, `calibration.ts`, `camera.ts`,
+`markersToWorld.ts`, `tracker.ts` and friends are the table's; `landmarks.ts`, `pinch.ts`,
+`smooth.ts`, `cursor.ts` and `pick.ts` are this one's. They can be worked on independently.
+
+`/plan` is untouched. Nothing in `components/gesture/` is imported by it.
 
 ## Running it
 

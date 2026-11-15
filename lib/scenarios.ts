@@ -28,17 +28,17 @@ export interface ScenarioEntry {
 export const SCENARIOS: ScenarioEntry[] = [
   {
     id: 'rosebowl',
-    name: 'Rose Bowl, Pasadena — illustrative',
+    name: 'Rose Bowl — illustrative',
     event: 'Major stadium event — planning sandbox',
-    blurb: '88,000 seats, 2.6 km to the rail anchor, one residential corridor.',
-    load: () => import('@/fixtures/scenario-rosebowl.json').then((m) => m.default),
+    blurb: 'Synthetic corridor, demand and businesses; not an official event plan.',
+    load: () => import('@/fixtures/scenario-rosebowl.json').then((module) => module.default),
   },
   {
     id: 'downtown',
-    name: 'Example downtown arena',
+    name: 'Downtown arena — illustrative',
     event: 'Urban arena event — planning sandbox',
-    blurb: '18,000 seats on a tight street grid, rail almost at the door.',
-    load: () => import('@/fixtures/scenario-downtown.json').then((m) => m.default),
+    blurb: 'Synthetic example with rail beside the venue; not a surveyed map.',
+    load: () => import('@/fixtures/scenario-downtown.json').then((module) => module.default),
   },
 ];
 

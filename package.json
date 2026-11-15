@@ -10,7 +10,9 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "sim": "tsx scripts/sim.ts"
+    "sim": "tsx scripts/sim.ts",
+    "test:vision": "tsx --test lib/vision/vision.test.ts",
+    "markers": "node scripts/generate-markers.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -20,6 +22,7 @@
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "framer-motion": "^14.14.0",
+    "js-aruco2": "2.0.0",
     "lucide-react": "^1.73.0",
     "next": "15.5.29",
     "react": "19.1.0",
