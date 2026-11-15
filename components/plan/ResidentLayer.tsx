@@ -4,25 +4,22 @@
 //
 // The people the plan costs, drawn as the houses they live in.
 //
-// There is no polygon here and that is the point. A residential block is a
-// census fact, not an object on the map — nobody drags a neighbourhood to
-// improve an egress score — so the old trapezoids were abstract shapes
-// floating over a city that already contained the same information. The
-// buildings lining those streets ARE the block. This layer takes the fabric
-// parcels that fall inside each block (bucketed in basemapGeometry) and paints
-// them by how much worse this plan made getting home.
+// A residential block is a census fact, not an object on the map — nobody
+// drags a neighbourhood to improve an egress score — so these are not
+// draggable and, on an untouched plan, are not drawn at all.
 //
-// Until the plan hurts somebody, every one of these is drawn in the ordinary
-// fabric colour, so the city looks untouched. Close the wrong street and the
-// houses behind it light up. That is the product's whole argument, on the
-// canvas, in the place where the argument is about.
+// The background is blank. A block appears only once the plan has made getting
+// home measurably worse, and the colour is how much worse. Close the wrong
+// street and the people behind it surface; leave them alone and you never see
+// them. That is the product's whole argument, on the canvas, in the place the
+// argument is about.
 
 import { memo } from 'react';
-import type { BBox } from '@/lib/sim/types';
+import type { BBox, ResidentialBlock, Vec2 } from '@/lib/sim/types';
 import { type Transform, worldTransformString } from '@/lib/transform';
 
 interface Props {
-  blockMass: { id: string; d: string }[];
+  blocks: ResidentialBlock[];
   /** block id → minutes added to the drive out, versus a plan with no pieces */
   delayByBlock: Record<string, number>;
   bbox: BBox;
@@ -36,29 +33,29 @@ interface Props {
  *  layer technically correct and completely invisible. */
 const SATURATE_MIN = 3;
 
-function ResidentLayerImpl({ blockMass, delayByBlock, bbox, t }: Props) {
-  if (blockMass.length === 0) return null;
+function ResidentLayerImpl({ blocks, delayByBlock, bbox, t }: Props) {
+  // Only the blocks this plan actually costs. On a blank forecourt there is no
+  // city to tint, so an unaffected block draws nothing at all — which is also
+  // the honest reading: until you close something, you have not touched them.
+  const hurtBlocks = blocks.filter((b) => (delayByBlock[b.id] ?? 0) / SATURATE_MIN >= 0.02);
+  if (hurtBlocks.length === 0) return null;
 
   return (
     <g data-slot="residents" transform={worldTransformString(t, bbox)}>
-      {blockMass.map((b) => {
-        const delay = delayByBlock[b.id] ?? 0;
-        const k = Math.max(0, Math.min(delay / SATURATE_MIN, 1));
-        const hurt = k >= 0.02;
-        // Full `--worse` at saturation, not a wash of it. These houses sit
-        // under a translucent heat field on a near-black ground, so a tasteful
-        // 88% tint arrives on screen as "slightly less dark" and says nothing.
-        const fill = hurt
-          ? `color-mix(in oklab, var(--worse) ${Math.round(20 + k * 80)}%, var(--fabric))`
-          : 'var(--fabric)';
+      {hurtBlocks.map((b) => {
+        const k = Math.max(0, Math.min((delayByBlock[b.id] ?? 0) / SATURATE_MIN, 1));
+        const d =
+          'M' + b.polygon.map((p: Vec2) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('L') + 'Z';
+        // Full `--worse` at saturation, not a wash of it: on a near-black
+        // ground under a translucent heat field, a tasteful tint arrives as
+        // "slightly less dark" and says nothing.
+        const fill = `color-mix(in oklab, var(--worse) ${Math.round(20 + k * 80)}%, transparent)`;
         return (
           <g key={b.id}>
-            {/* A halo around the affected houses, so a hurt neighbourhood is
-                findable when the whole district is in frame and each parcel is
-                three pixels across. */}
+            {/* A halo, so a hurt block is findable without hunting. */}
             {k > 0.25 && (
               <path
-                d={b.d}
+                d={d}
                 fill="none"
                 stroke="var(--worse)"
                 strokeOpacity={0.3 + k * 0.4}
@@ -68,10 +65,10 @@ function ResidentLayerImpl({ blockMass, delayByBlock, bbox, t }: Props) {
               />
             )}
             <path
-              d={b.d}
+              d={d}
               fill={fill}
-              stroke={hurt ? 'var(--worse)' : 'var(--fabric-edge)'}
-              strokeOpacity={hurt ? 0.9 : 1}
+              stroke="var(--worse)"
+              strokeOpacity={0.9}
               strokeWidth={1}
               vectorEffect="non-scaling-stroke"
             />

@@ -22,7 +22,6 @@ import { Basemap } from '@/components/plan/Basemap';
 import { FlowLayer } from '@/components/plan/FlowLayer';
 import { HeatLayer } from '@/components/plan/HeatLayer';
 import { ResidentLayer } from '@/components/plan/ResidentLayer';
-import { basemapFor } from '@/components/plan/basemapGeometry';
 import { PieceLayer } from '@/components/plan/PieceLayer';
 import { RoadLayer } from '@/components/plan/RoadLayer';
 import { WorldLayer } from '@/components/plan/WorldLayer';
@@ -112,7 +111,16 @@ export function PlanCanvas({ onCommit }: Props) {
     const key = `${scenarioId}:${Math.round(size.width)}x${Math.round(size.height)}`;
     if (framedFor.current === key) return;
     framedFor.current = key;
-    setView(frameOn(fitTransform(world.bbox, size.width, size.height), world.bbox, world.venue.pos, FORECOURT_M));
+    // A scenario that is already forecourt-sized just fits — framing 1,100 m
+    // on the venue would centre on the bowl and push the street it leads to
+    // off the bottom of the canvas. Only a district needs cropping.
+    const span = Math.max(world.bbox.maxX - world.bbox.minX, world.bbox.maxY - world.bbox.minY);
+    const fit = fitTransform(world.bbox, size.width, size.height);
+    setView(
+      span <= FORECOURT_M * 1.5
+        ? IDENTITY_VIEW
+        : frameOn(fit, world.bbox, world.venue.pos, FORECOURT_M),
+    );
   }, [scenarioId, world, size.width, size.height]);
 
   const commit = useCallback(() => onCommit?.(), [onCommit]);
@@ -262,11 +270,11 @@ export function PlanCanvas({ onCommit }: Props) {
             pan.current = null;
           }}
         >
-          <Basemap world={world} bbox={bbox} basemap={world.basemap} t={t} />
+          <Basemap bbox={bbox} basemap={world.basemap} t={t} />
           {/* Homes, over the general fabric and under the streets, so a hurt
               block reads as part of the city rather than as an overlay on it. */}
           <ResidentLayer
-            blockMass={basemapFor(world).blockMass}
+            blocks={world.blocks}
             delayByBlock={blockDelay}
             bbox={bbox}
             t={t}

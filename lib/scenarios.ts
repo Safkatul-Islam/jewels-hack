@@ -27,6 +27,13 @@ export interface ScenarioEntry {
 // `scenario` block rather than read out of it. Keep them in step with the file.
 export const SCENARIOS: ScenarioEntry[] = [
   {
+    id: 'forecourt',
+    name: 'Venue forecourt — illustrative',
+    event: 'Major stadium event — planning sandbox',
+    blurb: 'One street out of the bowl, 880 m to the interchange, kit already on it.',
+    load: () => import('@/fixtures/scenario-forecourt.json').then((m) => m.default),
+  },
+  {
     id: 'arroyo',
     name: 'Arroyo — illustrative venue district',
     event: 'Major stadium event — planning sandbox',
