@@ -27,6 +27,7 @@ import { RoadLayer } from '@/components/plan/RoadLayer';
 import { WorldLayer } from '@/components/plan/WorldLayer';
 import { PALETTE_DATA_KEY } from '@/components/plan/PiecePalette';
 import { CameraPanel } from '@/components/gesture/CameraPanel';
+import { GesturePalette } from '@/components/gesture/GesturePalette';
 import { HandCursors } from '@/components/gesture/HandCursors';
 import { HoverHighlight } from '@/components/gesture/HoverHighlight';
 import { useGestureControl } from '@/components/gesture/useGestureControl';
@@ -345,6 +346,11 @@ export function PlanCanvas({ onCommit }: Props) {
             hovered={gesture.hovered}
             grabbed={gesture.held}
           />
+          {/* The hand-reachable palette. Only while tracking: with a mouse the
+              real one in the left rail is better in every way. */}
+          {gesture.live && (
+            <GesturePalette height={size.height} hoveredKind={gesture.hoveredKind} />
+          )}
           <HandCursors ref={gesture.cursorsRef} />
         </svg>
       )}
@@ -409,6 +415,9 @@ export function PlanCanvas({ onCommit }: Props) {
         <div className="pointer-events-none absolute top-3 left-3 flex flex-col gap-1 rounded-md border bg-background/90 px-2.5 py-2 text-[10px] leading-snug backdrop-blur">
           <span className="font-mono text-[9px] tracking-[0.16em] text-muted-foreground uppercase">
             Hands · {gesture.fps} fps
+          </span>
+          <span>
+            <b>Pinch a swatch</b> on the left to add one
           </span>
           <span>
             <b>Pinch</b> to pick up · release to drop

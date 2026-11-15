@@ -40,8 +40,9 @@ import {
   type HandSide,
   useHandTracking,
 } from '@/components/gesture/useHandTracking';
+import { gesturePaletteSlots, pickPaletteSlot } from '@/components/gesture/palette';
 import { usePlanStore } from '@/lib/store';
-import type { BBox, Piece, Vec2 } from '@/lib/sim/types';
+import type { BBox, Piece, PieceKind, Vec2 } from '@/lib/sim/types';
 import { anchorToCanvas } from '@/lib/vision/cursor';
 import { type PickTarget, pickNearest } from '@/lib/vision/pick';
 import {
@@ -94,6 +95,7 @@ interface Options {
 }
 
 export function useGestureControl({ scene, view, setView, onCommit }: Options) {
+  const addPiece = usePlanStore((s) => s.addPiece);
   const movePiece = usePlanStore((s) => s.movePiece);
   const rotatePiece = usePlanStore((s) => s.rotatePiece);
   const selectPiece = usePlanStore((s) => s.selectPiece);
@@ -106,6 +108,7 @@ export function useGestureControl({ scene, view, setView, onCommit }: Options) {
   // actually changing — a setState every frame re-renders the whole canvas.
   const [hovered, setHovered] = useState<readonly string[]>([]);
   const [held, setHeld] = useState<readonly string[]>([]);
+  const [hoveredKind, setHoveredKind] = useState<PieceKind | null>(null);
   const [recentredAt, setRecentredAt] = useState(0);
 
   const roles = useRef<Record<HandSide, Role>>({ left: null, right: null });
@@ -165,6 +168,7 @@ export function useGestureControl({ scene, view, setView, onCommit }: Options) {
     viewGesture.current = null;
     setHovered([]);
     setHeld([]);
+    setHoveredKind(null);
     // No frames are coming, so nothing else will hide the dots.
     cursorsRef.current?.update(new Map());
   }, [endRole]);
@@ -221,10 +225,31 @@ export function useGestureControl({ scene, view, setView, onCommit }: Options) {
           radiusPx: Math.max(metresToPx(s.t, footprintFor(piece.kind, piece.capacity)), 12) / 2,
         }));
 
+      const paletteSlots = gesturePaletteSlots(s.height);
+
       // ---- pinch down: decide what this hand just took hold of -------------
       for (const side of ['left', 'right'] as const) {
         const hand = pts.get(side);
         if (!hand || hand.phase !== 'down' || roles.current[side]) continue;
+
+        // The palette is checked before anything else. It sits over the canvas,
+        // so a pinch on a swatch would otherwise read as a pinch on empty
+        // ground and pan the map out from under the thing you were reaching for.
+        const newKind = pickPaletteSlot(hand.p, paletteSlots);
+        if (newKind) {
+          const w = screenToWorld(s.t, hand.p, s.bbox);
+          const pos = clampToBBox(snapToGrid(w, s.snapM), s.bbox);
+          const id = addPiece(newKind, pos);
+          // Born under the hand and already held, so the same pinch that took
+          // it from the palette carries it to where it belongs. `moved` starts
+          // true because the piece is new: the plan changed on this pinch
+          // whether or not the hand travels afterwards, so release must
+          // re-simulate even if you drop it exactly where you picked it up.
+          roles.current[side] = { kind: 'piece', id, dx: 0, dy: 0, moved: true };
+          selectPiece(id);
+          setDragging(id);
+          continue;
+        }
 
         const otherRole = roles.current[OTHER[side]];
         const otherPt = pts.get(OTHER[side]);
@@ -347,17 +372,26 @@ export function useGestureControl({ scene, view, setView, onCommit }: Options) {
       }
 
       const nextHover: string[] = [];
+      let nextKind: PieceKind | null = null;
       for (const side of ['left', 'right'] as const) {
         const hand = pts.get(side);
         if (!hand || !hand.visible || hand.phase !== 'none' || roles.current[side]) continue;
+        // A hand over the palette is reaching for a new piece, not hovering the
+        // map underneath it — so it highlights the swatch and nothing else.
+        const kind = pickPaletteSlot(hand.p, paletteSlots);
+        if (kind) {
+          nextKind ??= kind;
+          continue;
+        }
         const id = pickNearest(hand.p, targets);
         if (id && !nextHover.includes(id)) nextHover.push(id);
       }
 
       setHovered((prev) => (sameIds(prev, nextHover) ? prev : nextHover));
       setHeld((prev) => (sameIds(prev, nextHeld) ? prev : nextHeld));
+      setHoveredKind((prev) => (prev === nextKind ? prev : nextKind));
     },
-    [endRole, movePiece, rebaseViewGesture, rotatePiece, selectPiece, setDragging, setView],
+    [addPiece, endRole, movePiece, rebaseViewGesture, rotatePiece, selectPiece, setDragging, setView],
   );
 
   const { videoRef, status, error, fps, start, stop } = useHandTracking({
@@ -374,6 +408,8 @@ export function useGestureControl({ scene, view, setView, onCommit }: Options) {
     /** Piece ids to pass to <HoverHighlight>. */
     hovered,
     held,
+    /** The palette swatch a hand is over, for <GesturePalette>. */
+    hoveredKind,
     live: status === 'running',
     status,
     error,
