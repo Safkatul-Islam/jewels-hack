@@ -10,7 +10,7 @@ import { validateWorld } from '../scenarios';
 import type { WorldState } from '../sim/types';
 
 const { CV } = createRequire(import.meta.url)('js-aruco2/src/cv.js') as { CV: CvApi };
-const solo = (face: keyof typeof FACES) => renderScene([placeCard(FACES[face], { x: 320, y: 180 }, 100)]);
+const solo = (face: keyof typeof FACES) => renderScene([placeCard(FACES[face], { x: 320, y: 180 }, 160)]);
 
 test('the card recognizer feeds calibration, world updates and an immutable Confirm snapshot', () => {
   const input = new CardInput(CV);
@@ -18,10 +18,10 @@ test('the card recognizer feeds calibration, world updates and an immutable Conf
   input.enroll(solo('redFive'), 1, 'Arrival');
   input.enroll(solo('blackSeven'), 10, 'Shuttle');
   const frame = renderScene([
-    placeCard(FACES.court, { x: 110, y: 270 }, 55),
-    placeCard(FACES.redFive, { x: 110, y: 100 }, 55),
-    placeCard(FACES.blackSeven, { x: 430, y: 180 }, 55, 0.2),
-  ]);
+    placeCard(FACES.court, { x: 220, y: 540 }, 120),
+    placeCard(FACES.redFive, { x: 220, y: 200 }, 120),
+    placeCard(FACES.blackSeven, { x: 860, y: 360 }, 120, 0.2),
+  ], { width: 1280, height: 720 });
   const detected = input.detect(frame);
   assert.deepEqual(detected.markers.map(marker => marker.id).sort((a, b) => a - b), [0, 1, 10]);
   const fixture = validateWorld(JSON.parse(readFileSync(new URL('../../fixtures/scenario-rosebowl.json', import.meta.url), 'utf8')));
@@ -62,7 +62,8 @@ test('failed enrollment preserves references; roles can be replaced, removed and
 
 test('ambiguous headings stay continuous and a manual flip changes the heading once', () => {
   const input = new CardInput(CV);
-  input.enroll(solo('redFive'), 10, 'Symmetric card');
+  input.enroll(solo('redFive'), 10, 'Symmetric card', true);
+  assert.equal(input.list()[0].pointSymmetric, true);
   const corners = placeCard(FACES.redFive, { x: 200, y: 200 }, 80).corners;
   const reading: CardReading = { corners, identity: '10', score: 0.93, runnerUpScore: 0.3,
     headingAmbiguous: true, rejection: null };
