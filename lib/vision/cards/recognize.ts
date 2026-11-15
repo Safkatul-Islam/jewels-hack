@@ -25,7 +25,12 @@ export const MATCH_DEFAULTS = {
  * Captures one card's reference appearance. The frame must show exactly one
  * card, lying the way "upright" should mean for that card.
  */
-export function enrollCard(cv: CvApi, frame: Frame, id: string, options: QuadOptions = {}): EnrolledCard {
+export function enrollCard(
+  cv: CvApi,
+  frame: Frame,
+  id: string,
+  options: QuadOptions & { pointSymmetric?: boolean } = {},
+): EnrolledCard {
   if (!id.trim()) throw new Error('Enrollment needs a non-empty card id.');
   const quads = detectCardQuads(cv, frame, options);
   if (quads.length !== 1) {
@@ -35,7 +40,7 @@ export function enrollCard(cv: CvApi, frame: Frame, id: string, options: QuadOpt
   if (!feature.some((value) => value !== 0)) {
     throw new Error('Enrollment found a card outline with no printed pattern. Place the card face up.');
   }
-  return { id, feature };
+  return options.pointSymmetric ? { id, feature, pointSymmetric: true } : { id, feature };
 }
 
 function turned(corners: CardCorners): CardCorners {
@@ -68,7 +73,7 @@ export function recognizeCards(
   const readings = quads.map(({ corners }): CardReading => {
     const upright = describeCard(prepared, corners);
     const flipped = rotateFeature180(upright);
-    let best: { id: string; upright: number; flipped: number; score: number } | null = null;
+    let best: { card: EnrolledCard; upright: number; flipped: number; score: number } | null = null;
     let runnerUpScore = 0;
     for (const card of enrolled) {
       const uprightScore = similarity(upright, card.feature);
@@ -76,7 +81,7 @@ export function recognizeCards(
       const score = Math.max(uprightScore, flippedScore);
       if (!best || score > best.score) {
         if (best) runnerUpScore = Math.max(runnerUpScore, best.score);
-        best = { id: card.id, upright: uprightScore, flipped: flippedScore, score };
+        best = { card, upright: uprightScore, flipped: flippedScore, score };
       } else {
         runnerUpScore = Math.max(runnerUpScore, score);
       }
@@ -89,10 +94,10 @@ export function recognizeCards(
     }
     return {
       corners: best.flipped > best.upright ? turned(corners) : corners,
-      identity: best.id,
+      identity: best.card.id,
       score: best.score,
       runnerUpScore,
-      headingAmbiguous: Math.abs(best.upright - best.flipped) < settings.minHeadingMargin,
+      headingAmbiguous: best.card.pointSymmetric === true || Math.abs(best.upright - best.flipped) < settings.minHeadingMargin,
       rejection: null,
     };
   });
