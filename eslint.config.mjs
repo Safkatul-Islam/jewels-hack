@@ -18,6 +18,14 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // Nested git worktrees. These are whole checkouts of this repo living
+      // inside it, so without this every `npm run lint` lints the project
+      // several times over and reports another checkout's files as ours.
+      ".claude/**",
+      // Vendored MediaPipe runtime for the gesture mode, put there by
+      // `npm run vision:assets`. It is minified third-party glue — linting it
+      // buries every real finding under ~45,000 warnings about its internals.
+      "public/vision/**",
     ],
   },
 ];
