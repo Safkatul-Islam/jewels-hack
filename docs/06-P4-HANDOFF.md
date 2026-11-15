@@ -11,8 +11,16 @@ with enrolled regular playing cards. Codex owns existing P4 software in this che
 on `p4-vision-table`. Claude owns new `lib/vision/cards/**` files/tests and
 `docs/08-PLAYING-CARDS.md` in the separate sibling `jewel-city-hacks-cards` worktree,
 branch `p4-playing-cards`, starting at `a8af439`. Neither agent edits the other's files.
-Card integration, merges and pushes still require the agreed review/approval steps.
+Further card-module merges and all pushes require the agreed review/approval steps.
 The ArUco path and printable pack remain available as existing fallback/test inputs.
+
+Update: the owner approved merging the card module at `3606196` and adding enrollment
+to `/table`; local merge `e601d0c` completed without conflict. Playing Cards is now the
+default input, with an ArUco fallback, separate synthetic card demo, session-only
+enrollment, role selection and manual half-turn correction. See
+`docs/09-CARD-TABLE-INTEGRATION.md` for the current user flow and checks. Later Claude
+changes and any push still need separate approval. Physical-card recognition remains
+unverified by Codex; Claude is handling real-photo checks separately.
 
 ## Run and demonstrate
 
@@ -24,11 +32,12 @@ npm run dev
 ```
 
 Open **http://localhost:3000/table** (use the port printed by Next.js).
-Click **Load marker test**, move the position slider, enable **3D models**, then
+Click **Load card demo**, move the position slider, enable **3D models**, then
 **Confirm plan**. Follow **Open planner** to see the confirmed pieces through P1's
 shared Zustand store. Client navigation preserves that store; a full reload resets it.
 
-The generated input goes through the **real js-aruco2 detector**. It is synthetic,
+The generated input goes through the **real card recognizer** (or js-aruco2 detector
+when ArUco is selected). It is synthetic,
 clearly labelled, and does not establish physical camera performance. Draft movements
 remain local to the capture session until Confirm. Confirm writes the full world to
 the shared store, then runs P3's `buildNetwork` and `simulate` **once** and stores the
