@@ -107,7 +107,9 @@ export const CameraPanel = forwardRef<CameraPanelHandle, Props>(function CameraP
   }));
 
   return (
-    <div className="pointer-events-none absolute bottom-3 left-3 overflow-hidden rounded-lg border border-white/15 bg-black/80 shadow-lg backdrop-blur">
+    // bottom-12, not bottom-3: the canvas keeps its scale bar at bottom-3 left-3,
+    // and the corridor length is the whole premise — the preview must not sit on it.
+    <div className="pointer-events-none absolute bottom-12 left-3 overflow-hidden rounded-lg border border-white/15 bg-black/80 shadow-lg backdrop-blur">
       <div className="relative" style={{ width: W, height: H }}>
         <video
           ref={videoRef}

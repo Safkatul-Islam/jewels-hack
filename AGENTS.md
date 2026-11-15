@@ -75,7 +75,7 @@ Built at Joe City Hack 6.0 by a team of four, in roughly six hours.
 | [docs/05-DECISIONS.md](docs/05-DECISIONS.md) | Why things are this way; what's unverified |
 | [docs/06-P4-HANDOFF.md](docs/06-P4-HANDOFF.md) | P4's handoff notes for the ArUco table build |
 | [docs/07-ENGINEERING-NOTES.md](docs/07-ENGINEERING-NOTES.md) | P4's research log: what was verified, against which source |
-| [docs/08-GESTURE-MODE.md](docs/08-GESTURE-MODE.md) | `/gesture` — hand tracking, the gestures, tuning |
+| [docs/08-GESTURE-MODE.md](docs/08-GESTURE-MODE.md) | Hand control on `/plan` — tracking, the gestures, tuning |
 | [docs/09-P4-RULES.md](docs/09-P4-RULES.md) | P4's own working rules, kept for reference — **this file wins where they disagree** |
 
 If an instruction here conflicts with a doc, this file wins and the doc needs updating.

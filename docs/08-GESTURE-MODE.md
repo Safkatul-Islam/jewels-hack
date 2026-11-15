@@ -1,23 +1,31 @@
 # Gesture mode — P4's playbook
 
-`/gesture` is the plan canvas driven by two hands in front of a webcam.
+Hand control lives **on `/plan`**, behind the hand button in the canvas's top-right
+controls. There is no separate route: it is the same canvas, the same pieces and the same
+simulation, with a second way to touch them.
+
+It used to be its own page and its own canvas. That was right while P1 was rewriting
+PlanCanvas underneath it — threading a gesture mode through the one component the product
+rests on would have put a merge conflict in the worst possible place — and it stopped being
+right the moment the copy fell behind. The canvas gained a heat layer, a resident layer and
+the console styling; the copy had none of it, and the two pages started to look like two
+products. One canvas, one driver (`components/gesture/useGestureControl.ts`).
 
 It is the **second** camera route into the plan, not a replacement for the first. The ArUco
 table (`/table`, `04-TABLE-MODE.md`, `06-P4-HANDOFF.md`) is built and merged; what it needs
-is a printer for the markers. This one keeps what the table mode was for — moving the
+is a printer for the markers. Hand control keeps what the table mode was for — moving the
 infrastructure with your hands, in front of an audience, with no mouse between you and the
 plan — and drops what the table mode needs in the room: printed markers, a calibration
 pair, controlled overhead lighting, and a camera mounted above a surface. A laptop and its
 built-in webcam are the whole rig.
 
 So pick by what the room allows. With a printer and a table, `/table` reads real objects
-and is the better demo. Without one, `/gesture` needs nothing but the laptop.
+and is the better demo. Without one, the hand button on `/plan` needs nothing but the laptop.
 
 The two share `lib/vision/` but no code: `aruco.ts`, `calibration.ts`, `camera.ts`,
 `markersToWorld.ts`, `tracker.ts` and friends are the table's; `landmarks.ts`, `pinch.ts`,
-`smooth.ts`, `cursor.ts` and `pick.ts` are this one's. They can be worked on independently.
-
-`/plan` is untouched. Nothing in `components/gesture/` is imported by it.
+`smooth.ts`, `cursor.ts` and `pick.ts` are hand control's. They can be worked on
+independently.
 
 ## Running it
 
@@ -29,7 +37,9 @@ npm run dev
 model) and no-ops once it is there. The files are gitignored, so a fresh clone does this
 once. To do it by hand: `npm run vision:assets`.
 
-Then open **`http://localhost:3000/gesture`** and press *Start hands*.
+Then open **`http://localhost:3000/plan`** and press the **hand button** in the canvas's
+top-right controls, under the zoom buttons. The camera preview appears bottom-left and the
+gesture list top-left while tracking; both disappear when you stop.
 
 > `getUserMedia` needs a secure context. `localhost` qualifies, a LAN IP does not.
 > **Demo from localhost.** This is the same constraint the table mode had.

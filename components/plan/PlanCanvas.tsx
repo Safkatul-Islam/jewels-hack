@@ -26,6 +26,10 @@ import { PieceLayer } from '@/components/plan/PieceLayer';
 import { RoadLayer } from '@/components/plan/RoadLayer';
 import { WorldLayer } from '@/components/plan/WorldLayer';
 import { PALETTE_DATA_KEY } from '@/components/plan/PiecePalette';
+import { CameraPanel } from '@/components/gesture/CameraPanel';
+import { HandCursors } from '@/components/gesture/HandCursors';
+import { HoverHighlight } from '@/components/gesture/HoverHighlight';
+import { useGestureControl } from '@/components/gesture/useGestureControl';
 import { usePlanStore } from '@/lib/store';
 import type { PieceKind } from '@/lib/sim/types';
 import {
@@ -47,6 +51,9 @@ interface Props {
   /** Fires when the plan changed in a way that should re-simulate. */
   onCommit?: () => void;
 }
+
+/** Stand-in so the transform can be computed before the no-scenario return. */
+const EMPTY_BBOX = { minX: 0, maxX: 1, minY: 0, maxY: 1 };
 
 /** Pointer travel, in px, below which a press on empty canvas is a click. */
 const CLICK_SLOP = 4;
@@ -175,6 +182,28 @@ export function PlanCanvas({ onCommit }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [selectedPieceId, world, removePiece, rotatePiece, selectPiece, armKind, commit]);
 
+  // Computed before the no-scenario return because useGestureControl is a hook
+  // and cannot sit behind one. `t` is only meaningful once a world and a
+  // measured viewport exist; until then the scene below is null and the frame
+  // loop ignores its frames.
+  const fit = fitTransform(world?.bbox ?? EMPTY_BBOX, size.width, size.height);
+  const t = composeView(fit, view);
+
+  /**
+   * Two-hand control of this canvas. It drives the same store actions the
+   * mouse does and commits on release, so the simulation still runs once per
+   * edit (AGENTS.md §2.7) whichever way the piece was moved.
+   */
+  const gesture = useGestureControl({
+    scene:
+      world && size.width > 0
+        ? { t, bbox: world.bbox, pieces: world.pieces, width: size.width, height: size.height, snapM }
+        : null,
+    view,
+    setView,
+    onCommit: commit,
+  });
+
   if (!world) {
     return (
       <div
@@ -187,8 +216,6 @@ export function PlanCanvas({ onCommit }: Props) {
   }
 
   const bbox = world.bbox;
-  const fit = fitTransform(bbox, size.width, size.height);
-  const t = composeView(fit, view);
 
   function place(kind: PieceKind, clientX: number, clientY: number) {
     const host = hostRef.current;
@@ -308,7 +335,25 @@ export function PlanCanvas({ onCommit }: Props) {
             playing={playing}
           />
           <PieceLayer pieces={world.pieces} bbox={bbox} t={t} onCommit={commit} />
+          {/* Gesture feedback, above the pieces so a ring is never buried under
+              a facility, and pointer-events-none so the mouse still reaches
+              them. Both render nothing until a hand is actually tracked. */}
+          <HoverHighlight
+            pieces={world.pieces}
+            bbox={bbox}
+            t={t}
+            hovered={gesture.hovered}
+            grabbed={gesture.held}
+          />
+          <HandCursors ref={gesture.cursorsRef} />
         </svg>
+      )}
+
+      {/* Only once someone has asked for hands. On a page where most people
+          will use the mouse, a permanent black camera box in the corner is a
+          feature advertising itself at the plan's expense. */}
+      {gesture.status !== 'idle' && (
+        <CameraPanel ref={gesture.panelRef} videoRef={gesture.videoRef} live={gesture.live} />
       )}
 
       {/* scale bar — the corridor length is the whole premise, so make it readable */}
@@ -328,7 +373,57 @@ export function PlanCanvas({ onCommit }: Props) {
         >
           <span className="text-[9px] tracking-tight">FIT</span>
         </ZoomButton>
+        <ZoomButton
+          label={gesture.live ? 'Stop hand control' : 'Control the plan with your hands'}
+          onClick={gesture.live ? gesture.stop : () => void gesture.start()}
+        >
+          <HandIcon active={gesture.live} />
+        </ZoomButton>
       </div>
+
+      {gesture.status === 'starting' && (
+        <div className="pointer-events-none absolute inset-x-0 top-3 mx-auto w-fit rounded-full bg-foreground/90 px-3 py-1 text-xs font-medium text-background">
+          Starting the camera…
+        </div>
+      )}
+
+      {gesture.error && (
+        // inset-x-14, not inset-x-3: the zoom stack lives at top-3 right-3 and a
+        // full-width banner lands on top of it.
+        <div className="absolute inset-x-14 top-3 mx-auto w-fit max-w-sm rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
+          {gesture.error}
+        </div>
+      )}
+
+      {gesture.justRecentred && (
+        <div className="pointer-events-none absolute inset-x-0 top-3 mx-auto w-fit rounded-full bg-foreground/90 px-3 py-1 text-xs font-medium text-background">
+          Recentred on your hands
+        </div>
+      )}
+
+      {/* The gestures, written down. Not optional: the dot at your hand says
+          where you are and nothing else, so there is no way to discover that a
+          pinch is the clutch or that a fist recentres. Shown only while
+          tracking, because it is onboarding, not chrome. */}
+      {gesture.live && (
+        <div className="pointer-events-none absolute top-3 left-3 flex flex-col gap-1 rounded-md border bg-background/90 px-2.5 py-2 text-[10px] leading-snug backdrop-blur">
+          <span className="font-mono text-[9px] tracking-[0.16em] text-muted-foreground uppercase">
+            Hands · {gesture.fps} fps
+          </span>
+          <span>
+            <b>Pinch</b> to pick up · release to drop
+          </span>
+          <span>
+            <b>Other hand</b> turns what you hold
+          </span>
+          <span>
+            <b>Pinch empty space</b> to pan · both to zoom
+          </span>
+          <span>
+            <b>Hold a fist</b> to recentre
+          </span>
+        </div>
+      )}
 
       {view.k > 1.02 && (
         <div className="pointer-events-none absolute right-3 bottom-3 rounded bg-background/85 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground tabular-nums backdrop-blur">
@@ -342,6 +437,23 @@ export function PlanCanvas({ onCommit }: Props) {
         </div>
       )}
     </div>
+  );
+}
+
+/** A hand, filled while tracking so the button reads as a state, not an action. */
+function HandIcon({ active }: { active: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
+      <path
+        d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0 0V4.5a1.5 1.5 0 0 1 3 0V11m0 0V6.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-1a6 6 0 0 1-5.2-3L5 14.2a1.5 1.5 0 0 1 2.6-1.5L9 15V11Z"
+        fill={active ? 'currentColor' : 'none'}
+        fillOpacity={active ? 0.18 : 0}
+        stroke="currentColor"
+        strokeWidth={1.6}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
