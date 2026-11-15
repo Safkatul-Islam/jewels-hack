@@ -19,6 +19,7 @@
 
 import { useCallback, useEffect } from 'react';
 import Link from 'next/link';
+import { Dashboard } from '@/components/dashboard/Dashboard';
 import { GestureCanvas } from '@/components/gesture/GestureCanvas';
 import { PieceInspector } from '@/components/plan/PieceInspector';
 import { PiecePalette } from '@/components/plan/PiecePalette';
@@ -123,7 +124,7 @@ export default function GesturePage() {
         </section>
 
         <aside className="min-h-0 overflow-y-auto border-l p-3">
-          <MetricsReadout />
+          <Dashboard />
         </aside>
       </div>
     </main>
@@ -155,64 +156,6 @@ function GestureLegend() {
           </div>
         ))}
       </dl>
-    </div>
-  );
-}
-
-/**
- * The same raw readout /plan carries, for the same reason: it proves the wiring
- * — pinch a piece, drop it, network rebuilds, numbers move — before the real
- * dashboard exists. Replace with <Dashboard /> when components/dashboard/ lands.
- */
-function MetricsReadout() {
-  const result = usePlanStore((s) => s.result);
-  const loading = usePlanStore((s) => s.loading);
-
-  if (loading) {
-    return (
-      <div className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
-        Loading scenario…
-      </div>
-    );
-  }
-
-  if (!result) {
-    return (
-      <div className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
-        No result yet.
-      </div>
-    );
-  }
-
-  const m = result.metrics;
-  const rows: { label: string; value: string }[] = [
-    { label: 'Egress median', value: `${m.egressMedianMin.toFixed(1)} min` },
-    { label: 'Egress p90', value: `${m.egressP90Min.toFixed(1)} min` },
-    { label: 'Transit mode share', value: `${m.transitModeSharePct.toFixed(0)} %` },
-    { label: 'Crowd peak', value: `${m.crowdPeakPerM2.toFixed(2)} /m²` },
-    { label: 'Local revenue', value: `$${Math.round(m.localRevenueUsd).toLocaleString('en-US')}` },
-    { label: 'Plan score', value: result.score.total.toFixed(1) },
-  ];
-
-  return (
-    <div className="flex flex-col gap-3 rounded-xl border border-dashed p-4">
-      <p className="text-xs font-medium">Run</p>
-      <dl className="flex flex-col gap-1.5">
-        {rows.map((row) => (
-          <div key={row.label} className="flex items-baseline justify-between gap-3">
-            <dt className="text-[11px] text-muted-foreground">{row.label}</dt>
-            <dd className="text-sm tabular-nums">{row.value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      {result.warnings.length > 0 && (
-        <ul className="flex flex-col gap-1 text-[11px] leading-relaxed text-muted-foreground">
-          {result.warnings.map((w) => (
-            <li key={w}>⚠ {w}</li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }
