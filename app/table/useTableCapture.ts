@@ -145,7 +145,8 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
       const currentWorld = worldRef.current;
       const session = sessionRef.current;
       const canvas = canvasRef.current;
-      if (!source || !currentWorld || !session || !canvas || now - previousFrame < 100) return;
+      const captureInterval = inputModeRef.current === 'cards' ? 200 : 100;
+      if (!source || !currentWorld || !session || !canvas || now - previousFrame < captureInterval) return;
       if (inputModeRef.current === 'aruco' ? !detectorRef.current : !activeCards()) return;
       previousFrame = now;
       // A newly selected source starts clean; only a size change within one source
@@ -169,7 +170,9 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
           const inputWidth = source.image?.width ?? video!.videoWidth;
           const inputHeight = source.image?.height ?? video!.videoHeight;
           if (!inputWidth || !inputHeight) return;
-          const scale = Math.min(1, 1280 / inputWidth, 720 / inputHeight);
+          const scale = inputModeRef.current === 'cards'
+            ? Math.min(1, 1280 / Math.max(inputWidth, inputHeight))
+            : Math.min(1, 1280 / inputWidth, 720 / inputHeight);
           const width = Math.round(inputWidth * scale);
           const height = Math.round(inputHeight * scale);
           if (canvas.width !== width || canvas.height !== height) {
@@ -349,7 +352,7 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
     setStatus(next === 'cards' ? 'Show one face-up card, choose its role, then Enroll. Use a dark surface.' : 'ArUco mode: start capture or load the marker test.');
   }
 
-  function enroll(markerId: number, label: string) {
+  function enroll(markerId: number, label: string, pointSymmetric: boolean) {
     try {
       const canvas = canvasRef.current;
       const input = activeCards();
@@ -360,7 +363,7 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
       }
       const context = canvas.getContext('2d');
       if (!context) throw new Error('Canvas is unavailable.');
-      input.enroll(context.getImageData(0, 0, canvas.width, canvas.height), markerId, label);
+      input.enroll(context.getImageData(0, 0, canvas.width, canvas.height), markerId, label, pointSymmetric);
       resetTracking();
       setEnrollments(input.list());
       setStatus(`Card enrolled for role ${markerId}. Keep the venue, arrival and a movable card visible for overhead mode.`);
