@@ -54,9 +54,26 @@ to discover that.
 |---|---|
 | Move a hand | A faint dot follows it, and the piece you would grab highlights. |
 | Pinch (thumb to index) | Picks up the highlighted piece. Release drops it — and that is the one moment the simulation runs. |
+| Pinch a swatch on the left | Adds that kind. It is created under your hand, already held, so the same pinch carries it where it belongs. |
+| Carry a held piece to the bin on the right | Deletes it on release. The bin appears only while something is in hand. |
 | Pinch with the other hand while holding | Rotates the held piece. The angle between your hands is its bearing. Snaps to 15°. |
 | Pinch empty space | Pans. Both hands, pull apart → zoom. |
 | Hold a fist (~350 ms) | Recentres: wherever your hands are now becomes the middle of the canvas. |
+
+Pieces come from the left edge and leave by the right one. That symmetry is the whole
+explanation of both gestures, which is why deleting is a place rather than a hand shape: a
+shake or a fist would be another shape to learn and far easier to fire by accident.
+
+Deleting is also the one gesture here that reversing does not undo — drop a piece in the
+wrong place and you pick it up again, but a deleted facility is gone and the simulation has
+already moved on. So the bin is the one piece of gesture feedback that shouts: at the
+threshold it fills with the destructive colour, its lid lifts, and it says `RELEASE`.
+
+On a canvas narrower than about 154 px there is no bin at all. Its hit zone is open to the
+right and the palette's is open to the left, so below that width the two would overlap —
+and because the palette is tested on pinch-down and the bin on release, one pinch could
+then create a facility and delete it without the hand moving. Deleting falls back to the
+mouse and the Delete key.
 
 ### Why the cursor is barely there
 

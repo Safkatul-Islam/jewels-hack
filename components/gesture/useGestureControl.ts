@@ -41,6 +41,7 @@ import {
   useHandTracking,
 } from '@/components/gesture/useHandTracking';
 import { gesturePaletteSlots, pickPaletteSlot } from '@/components/gesture/palette';
+import { isOverTrash, trashZone } from '@/components/gesture/trash';
 import { usePlanStore } from '@/lib/store';
 import type { BBox, Piece, PieceKind, Vec2 } from '@/lib/sim/types';
 import { anchorToCanvas } from '@/lib/vision/cursor';
@@ -97,6 +98,7 @@ interface Options {
 export function useGestureControl({ scene, view, setView, onCommit }: Options) {
   const addPiece = usePlanStore((s) => s.addPiece);
   const movePiece = usePlanStore((s) => s.movePiece);
+  const removePiece = usePlanStore((s) => s.removePiece);
   const rotatePiece = usePlanStore((s) => s.rotatePiece);
   const selectPiece = usePlanStore((s) => s.selectPiece);
   const setDragging = usePlanStore((s) => s.setDragging);
@@ -109,6 +111,8 @@ export function useGestureControl({ scene, view, setView, onCommit }: Options) {
   const [hovered, setHovered] = useState<readonly string[]>([]);
   const [held, setHeld] = useState<readonly string[]>([]);
   const [hoveredKind, setHoveredKind] = useState<PieceKind | null>(null);
+  /** A hand is holding a piece over the bin — release deletes it. */
+  const [trashArmed, setTrashArmed] = useState(false);
   const [recentredAt, setRecentredAt] = useState(0);
 
   const roles = useRef<Record<HandSide, Role>>({ left: null, right: null });
@@ -169,6 +173,7 @@ export function useGestureControl({ scene, view, setView, onCommit }: Options) {
     setHovered([]);
     setHeld([]);
     setHoveredKind(null);
+    setTrashArmed(false);
     // No frames are coming, so nothing else will hide the dots.
     cursorsRef.current?.update(new Map());
   }, [endRole]);
@@ -226,6 +231,7 @@ export function useGestureControl({ scene, view, setView, onCommit }: Options) {
         }));
 
       const paletteSlots = gesturePaletteSlots(s.height);
+      const bin = trashZone(s.width, s.height);
 
       // ---- pinch down: decide what this hand just took hold of -------------
       for (const side of ['left', 'right'] as const) {
@@ -295,7 +301,24 @@ export function useGestureControl({ scene, view, setView, onCommit }: Options) {
       // ---- pinch up --------------------------------------------------------
       for (const side of ['left', 'right'] as const) {
         const hand = pts.get(side);
-        if (hand?.phase === 'up' || (!hand && roles.current[side])) endRole(side);
+        const role = roles.current[side];
+
+        // Released over the bin: delete instead of drop. Handled here rather
+        // than in endRole because endRole has no idea where the hand was, and
+        // where it was is the entire difference between moving and deleting.
+        if (hand?.phase === 'up' && role?.kind === 'piece' && isOverTrash(hand.p, bin)) {
+          roles.current[side] = null;
+          setDragging(null);
+          // Whatever the other hand was rotating is gone too.
+          const other = roles.current[OTHER[side]];
+          if (other?.kind === 'rotate' && other.id === role.id) roles.current[OTHER[side]] = null;
+          removePiece(role.id);
+          selectPiece(null);
+          commit();
+          continue;
+        }
+
+        if (hand?.phase === 'up' || (!hand && role)) endRole(side);
       }
 
       // ---- held: do the work ----------------------------------------------
@@ -366,9 +389,17 @@ export function useGestureControl({ scene, view, setView, onCommit }: Options) {
 
       // ---- hover highlight -------------------------------------------------
       const nextHeld: string[] = [];
+      let nextTrashArmed = false;
       for (const side of ['left', 'right'] as const) {
         const role = roles.current[side];
         if (role && (role.kind === 'piece' || role.kind === 'rotate')) nextHeld.push(role.id);
+        // Only a hand actually carrying a piece can arm the bin. An empty hand
+        // wandering across it must not light it up, or the warning stops
+        // meaning anything.
+        if (role?.kind === 'piece') {
+          const hand = pts.get(side);
+          if (hand && isOverTrash(hand.p, bin)) nextTrashArmed = true;
+        }
       }
 
       const nextHover: string[] = [];
@@ -390,8 +421,20 @@ export function useGestureControl({ scene, view, setView, onCommit }: Options) {
       setHovered((prev) => (sameIds(prev, nextHover) ? prev : nextHover));
       setHeld((prev) => (sameIds(prev, nextHeld) ? prev : nextHeld));
       setHoveredKind((prev) => (prev === nextKind ? prev : nextKind));
+      setTrashArmed((prev) => (prev === nextTrashArmed ? prev : nextTrashArmed));
     },
-    [addPiece, endRole, movePiece, rebaseViewGesture, rotatePiece, selectPiece, setDragging, setView],
+    [
+      addPiece,
+      commit,
+      endRole,
+      movePiece,
+      rebaseViewGesture,
+      removePiece,
+      rotatePiece,
+      selectPiece,
+      setDragging,
+      setView,
+    ],
   );
 
   const { videoRef, status, error, fps, start, stop } = useHandTracking({
@@ -410,6 +453,8 @@ export function useGestureControl({ scene, view, setView, onCommit }: Options) {
     held,
     /** The palette swatch a hand is over, for <GesturePalette>. */
     hoveredKind,
+    /** A held piece is over the bin — release deletes it. For <GestureTrash>. */
+    trashArmed,
     live: status === 'running',
     status,
     error,

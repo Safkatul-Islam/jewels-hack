@@ -28,6 +28,7 @@ import { WorldLayer } from '@/components/plan/WorldLayer';
 import { PALETTE_DATA_KEY } from '@/components/plan/PiecePalette';
 import { CameraPanel } from '@/components/gesture/CameraPanel';
 import { GesturePalette } from '@/components/gesture/GesturePalette';
+import { GestureTrash } from '@/components/gesture/GestureTrash';
 import { HandCursors } from '@/components/gesture/HandCursors';
 import { HoverHighlight } from '@/components/gesture/HoverHighlight';
 import { useGestureControl } from '@/components/gesture/useGestureControl';
@@ -351,6 +352,11 @@ export function PlanCanvas({ onCommit }: Props) {
           {gesture.live && (
             <GesturePalette height={size.height} hoveredKind={gesture.hoveredKind} />
           )}
+          {/* The bin appears only while something is actually in hand: shown
+              permanently it is an invitation, shown then it is an answer. */}
+          {gesture.live && gesture.held.length > 0 && (
+            <GestureTrash width={size.width} height={size.height} armed={gesture.trashArmed} />
+          )}
           <HandCursors ref={gesture.cursorsRef} />
         </svg>
       )}
@@ -424,6 +430,9 @@ export function PlanCanvas({ onCommit }: Props) {
           </span>
           <span>
             <b>Other hand</b> turns what you hold
+          </span>
+          <span>
+            <b>Carry to the bin</b> on the right to delete
           </span>
           <span>
             <b>Pinch empty space</b> to pan · both to zoom
