@@ -9,13 +9,18 @@ import { DICTIONARY, type PixelMarker } from '@/lib/vision/contracts';
 import { DEFAULT_SAMPLE_SETTINGS, drawSampleFrame, loadSampleMarkers, type SampleSettings } from '@/lib/vision/sampleFrame';
 import { TableSession } from '@/lib/vision/session';
 import type { TrackedReading } from '@/lib/vision/tracker';
+import { CardInput, type CardEnrollment } from '@/lib/vision/cardInput';
+import type { CardDemo } from '@/lib/vision/cardSample';
+import type { CardReading, CvApi } from '@/lib/vision/cards/types';
 
-type SourceKind = 'camera' | 'video' | 'image' | 'test';
+type SourceKind = 'camera' | 'video' | 'image' | 'test' | 'card-test';
+type InputMode = 'cards' | 'aruco';
 type CalibrationMode = 'overhead' | 'planar';
 interface CaptureSource { kind: SourceKind; image?: ImageBitmap; url?: string }
 interface CaptureView {
   source: SourceKind | null;
   markers: PixelMarker[];
+  cards: CardReading[];
   readings: TrackedReading[];
   width: number;
   height: number;
@@ -26,9 +31,13 @@ interface CaptureView {
 }
 
 function emptyView(world: WorldState | null): CaptureView {
-  return { source: null, markers: [], readings: [], width: 1280, height: 720,
+  return { source: null, markers: [], cards: [], readings: [], width: 1280, height: 720,
     processingMs: 0, calibrated: false, canConfirm: false, draft: world };
 }
+
+// Created only by a browser event. Retain real references across Next.js route
+// changes in this tab; reload drops them. Demo references never enter this session.
+let cardSession: { cv: CvApi; input: CardInput } | null = null;
 
 export function useTableCapture(world: WorldState | null, onConfirm: (world: WorldState) => void) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -38,6 +47,12 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
   const sourceRef = useRef<CaptureSource | null>(null);
   const cameraRef = useRef<CameraController | null>(null);
   const detectorRef = useRef<ArucoDetector | null>(null);
+  const cvRef = useRef<CvApi | null>(cardSession?.cv ?? null);
+  const cardsRef = useRef<CardInput | null>(cardSession?.input ?? null);
+  const demoCardsRef = useRef<CardInput | null>(null);
+  const cardDemoRef = useRef<CardDemo | null>(null);
+  const inputModeRef = useRef<InputMode>('cards');
+  const demoRoleRef = useRef<number | null>(null);
   const generationRef = useRef(0);
   const mountedRef = useRef(false);
   const frameTimeRef = useRef(0);
@@ -48,13 +63,20 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
   const selectingRef = useRef(false);
   const viewRef = useRef<CaptureView>(emptyView(world));
   const [view, setView] = useState<CaptureView>(() => emptyView(world));
-  const [status, setStatus] = useState('Start with the generated marker test, or connect your camera.');
+  const [status, setStatus] = useState('Try the synthetic card demo, or start capture and enroll your own cards.');
   const [busy, setBusy] = useState(false);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState('');
   const [mode, setMode] = useState<CalibrationMode>('overhead');
   const [points, setPoints] = useState<Vec2[]>([]);
   const [testSettings, setTestSettings] = useState<SampleSettings>({ ...DEFAULT_SAMPLE_SETTINGS });
+  const [inputMode, setInputMode] = useState<InputMode>('cards');
+  const [enrollments, setEnrollments] = useState<CardEnrollment[]>([]);
+  const [demoRole, setDemoRole] = useState<number | null>(null);
+
+  const activeCards = useCallback(() => sourceRef.current?.kind === 'card-test' ? demoCardsRef.current : cardsRef.current, []);
+
+  useEffect(() => { setEnrollments(activeCards()?.list() ?? []); }, [activeCards, view.source]);
 
   const releaseSource = useCallback(() => {
     generationRef.current++;
@@ -71,7 +93,11 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
     sourceRef.current = null;
   }, []);
 
-  const resetTracking = useCallback(() => {
+  const resetTracking = useCallback((preserveCardHeadings = false) => {
+    if (!preserveCardHeadings) {
+      cardsRef.current?.resetTracking();
+      demoCardsRef.current?.resetTracking();
+    }
     if (worldRef.current) sessionRef.current = new TableSession(worldRef.current);
     else sessionRef.current = null;
     pointsRef.current = [];
@@ -107,6 +133,7 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
 
   useEffect(() => {
     mountedRef.current = true;
+    cardsRef.current?.resetTracking();
     let animation = 0;
     let previousFrame = 0;
     let previousSize = '';
@@ -118,8 +145,8 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
       const currentWorld = worldRef.current;
       const session = sessionRef.current;
       const canvas = canvasRef.current;
-      const detector = detectorRef.current;
-      if (!source || !currentWorld || !session || !canvas || !detector || now - previousFrame < 100) return;
+      if (!source || !currentWorld || !session || !canvas || now - previousFrame < 100) return;
+      if (inputModeRef.current === 'aruco' ? !detectorRef.current : !activeCards()) return;
       previousFrame = now;
       // A newly selected source starts clean; only a size change within one source
       // (for example a camera renegotiating resolution) invalidates calibration.
@@ -130,7 +157,9 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
       try {
         const context = canvas.getContext('2d', { willReadFrequently: true });
         if (!context) throw new Error('2D canvas is unavailable.');
-        if (source.kind === 'test') {
+        if (source.kind === 'card-test') {
+          cardDemoRef.current!.draw(context, currentWorld, testSettingsRef.current, demoRoleRef.current);
+        } else if (source.kind === 'test') {
           drawSampleFrame(context, currentWorld, testImagesRef.current, testSettingsRef.current);
         } else {
           const video = videoRef.current;
@@ -157,11 +186,15 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
         }
         previousSize = size;
         const start = performance.now();
-        const markers = detectMarkers(detector, context.getImageData(0, 0, canvas.width, canvas.height));
+        const frame = context.getImageData(0, 0, canvas.width, canvas.height);
+        const detected = inputModeRef.current === 'cards' ? activeCards()!.detect(frame) : {
+          markers: detectMarkers(detectorRef.current!, frame), cards: [] as CardReading[],
+        };
+        const { markers, cards } = detected;
         const pendingPlanar = modeRef.current === 'planar' && (selectingRef.current || pointsRef.current.length !== 4);
         const result = pendingPlanar ? null : sessionRef.current!.process(markers, now);
         const next: CaptureView = {
-          source: source.kind, markers, readings: result?.readings ?? [],
+          source: source.kind, markers, cards, readings: result?.readings ?? [],
           width: canvas.width, height: canvas.height, processingMs: performance.now() - start,
           calibrated: Boolean(result?.calibration), canConfirm: result?.canConfirm ?? false,
           draft: result?.draft ?? viewRef.current.draft ?? currentWorld,
@@ -189,7 +222,7 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
       window.removeEventListener('pagehide', releaseOnHide);
       releaseSource();
     };
-  }, [releaseSource, resetTracking]);
+  }, [activeCards, releaseSource, resetTracking]);
 
   const prepare = useCallback(async () => {
     releaseSource();
@@ -197,7 +230,13 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
     setView(emptyView(worldRef.current));
     setBusy(true);
     const generation = generationRef.current;
-    if (!detectorRef.current) {
+    if (inputModeRef.current === 'cards' && !cardsRef.current) {
+      const { CV } = await import('js-aruco2/src/cv.js');
+      if (!mountedRef.current || generation !== generationRef.current) return null;
+      cvRef.current = CV;
+      cardsRef.current = new CardInput(CV);
+      cardSession = { cv: CV, input: cardsRef.current };
+    } else if (inputModeRef.current === 'aruco' && !detectorRef.current) {
       const { AR } = await import('js-aruco2');
       if (!mountedRef.current || generation !== generationRef.current) return null;
       detectorRef.current = new AR.Detector({ dictionaryName: DICTIONARY, maxHammingDistance: 4 });
@@ -240,6 +279,21 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
     try {
       generation = await prepare();
       if (generation === null) return;
+      if (inputModeRef.current === 'cards') {
+        const { CardDemo } = await import('@/lib/vision/cardSample');
+        if (!mountedRef.current || generation !== generationRef.current) return;
+        const demoCards = new CardInput(cvRef.current!);
+        const demo = new CardDemo(demoCards);
+        demoCardsRef.current = demoCards;
+        cardDemoRef.current = demo;
+        demoRoleRef.current = null;
+        setDemoRole(null);
+        sourceRef.current = { kind: 'card-test' };
+        setEnrollments(demoCards.list());
+        setBusy(false);
+        setStatus('Synthetic card demo: three sample references. Real-card enrollments are kept separately.');
+        return;
+      }
       const images = await loadSampleMarkers();
       if (!mountedRef.current || generation !== generationRef.current) return;
       testImagesRef.current = images;
@@ -288,6 +342,44 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
     setStatus(next === 'planar' ? 'Select the four corners of a physically marked table rectangle.' : 'Overhead mode requires markers 0 and 1 in view.');
   }
 
+  function changeInput(next: InputMode) {
+    stop();
+    inputModeRef.current = next;
+    setInputMode(next);
+    setStatus(next === 'cards' ? 'Show one face-up card, choose its role, then Enroll. Use a dark surface.' : 'ArUco mode: start capture or load the marker test.');
+  }
+
+  function enroll(markerId: number, label: string) {
+    try {
+      const canvas = canvasRef.current;
+      const input = activeCards();
+      // Enrollment captures the displayed appearance, including a deliberately still
+      // photo. Only Confirm needs the 500 ms position-freshness requirement.
+      if (!sourceRef.current || !canvas || !input || frameTimeRef.current <= 0) {
+        throw new Error('Load an image or start capture with one card visible before enrolling.');
+      }
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Canvas is unavailable.');
+      input.enroll(context.getImageData(0, 0, canvas.width, canvas.height), markerId, label);
+      resetTracking();
+      setEnrollments(input.list());
+      setStatus(`Card enrolled for role ${markerId}. Keep the venue, arrival and a movable card visible for overhead mode.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  function updateEnrollment(action: 'remove' | 'flip' | 'clear', markerId = 0) {
+    const input = activeCards();
+    if (!input) return;
+    if (action === 'clear') input.clear();
+    else if (action === 'remove') input.remove(markerId);
+    else input.flip(markerId);
+    resetTracking(action === 'flip');
+    setEnrollments(input.list());
+    setStatus('Enrollment updated; tracking and calibration reset.');
+  }
+
   function beginCalibration() {
     if (!sourceRef.current) { setStatus('Start a camera or load an input first.'); return; }
     resetTracking();
@@ -324,8 +416,14 @@ export function useTableCapture(world: WorldState | null, onConfirm: (world: Wor
   }
 
   return { view, status, busy, videoRef, canvasRef, devices, deviceId, setDeviceId,
+    inputMode, changeInput, enrollments, enroll, updateEnrollment, demoRole,
     mode, points, testSettings, startCamera, stop, loadTest, loadFile, changeMode,
     beginCalibration, selectCorner, confirm,
+    changeDemoRole(value: number | null) {
+      demoRoleRef.current = value;
+      setDemoRole(value);
+      resetTracking();
+    },
     changeTestSettings(update: Partial<SampleSettings>) {
       testSettingsRef.current = { ...testSettingsRef.current, ...update };
       setTestSettings(testSettingsRef.current);
