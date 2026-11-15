@@ -6,6 +6,11 @@ continue real-photo checks in the separate cards worktree; later changes need re
 and separate merge approval. No engine, frozen shared types, package manifest or
 lockfile was changed for this integration.
 
+Final approved update: `110e246` was merged locally as `fd2ee48`. It replaces the
+outline detector with the real-photo-validated local-contrast version. Keep cards at
+least 110 pixels across their short edge. Card capture retains up to 1280 px on its
+long side and processes at 5 Hz; the synthetic demo uses separated 120 px-wide cards.
+
 ## First try: software demo
 
 1. Open `http://localhost:3000/table` with **Playing Cards** selected.
@@ -31,7 +36,8 @@ is unavailable until both calibration cards and a movable card are present again
 2. Start a browser-visible camera explicitly, or open a local image/video file.
    Loading files never uploads them. An iPhone bridge is still a separate setup task.
 3. Show exactly one card. Choose a **Planning role**, optionally name the card, and
-   click **Enroll visible card**. A successful re-enrollment replaces only that role.
+   click **Enroll visible card**. Check **Two-headed** for the king and queen; uncheck
+   it for the ace of spades. A successful re-enrollment replaces only that role.
 4. Repeat for 0 (venue), 1 (first arrival anchor) and 10 (shuttle). The menu also supports
    all other existing planning roles, 11–16.
 5. Put the enrolled cards in view together. Overhead mode uses the current scenario's
@@ -77,19 +83,19 @@ a symmetric face. The overlay remains stylized orthographic, not full camera pos
 
 ## Verification
 
-Run the existing vision suite with `npm run test:vision`. Run all three suites from
+Run the existing vision suite with `npm run test:vision`. Run all four suites from
 PowerShell with the installed runner (no dependency download):
 
 ```powershell
-.\node_modules\.bin\tsx.cmd --test lib/vision/vision.test.ts lib/vision/cards/cards.test.ts lib/vision/cardInput.test.ts
+.\node_modules\.bin\tsx.cmd --test lib/vision/vision.test.ts lib/vision/cards/cards.test.ts lib/vision/cardInput.test.ts lib/vision/cards/realCards.test.ts
 npm.cmd run typecheck
 npm.cmd run lint
 npm.cmd run build
 git diff --check
 ```
 
-The combined suite has 25 test groups: 14 existing vision/fixture/lifecycle checks,
-8 card-detector tests and 3 adapter integration tests. New checks exercise recognition
+The combined suite has 29 test groups: 14 existing vision/fixture/lifecycle checks,
+9 card-detector tests, 3 real-photo tests and 3 adapter integration tests. Checks exercise recognition
 into calibration/world/Confirm, failed enrollment preservation, invalid roles, removal,
 unknown/uncertain rejection and stable half-turn correction.
 
@@ -97,7 +103,8 @@ Browser checks cover the bundled CV deep import, three recognized demo faces, ma
 enrollment of the three demo roles, rejection of multiple cards during enrollment,
 local PNG enrollment, physical-session reference retention through planner navigation,
 and the existing ArUco fallback. Synthetic PNG fixtures were used for the local-file
-check; no actual playing-card photograph or live camera was used by Codex.
+check. The final automated suite also exercises the three committed real-photo
+fixtures. No live camera was used by Codex.
 
 The dev-browser card flow also passed normal Confirm and planner navigation: the
 baseline score 57.9 became 39.7 after the generated shuttle moved/rotated, and `/plan`
