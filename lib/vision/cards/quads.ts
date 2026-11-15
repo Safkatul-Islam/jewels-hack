@@ -1,8 +1,6 @@
 import type { CardCorners, CardQuad, CvApi, CvImage, Frame, Vec2 } from './types';
 
 export interface QuadOptions {
-  /** Fixed 0-255 brightness threshold. Default: Otsu's threshold for the frame. */
-  threshold?: number;
   /** Smallest card area as a fraction of the frame. */
   minAreaFraction?: number;
   /** Largest card area as a fraction of the frame. */
@@ -14,10 +12,23 @@ export interface QuadOptions {
 
 export const QUAD_DEFAULTS = {
   minAreaFraction: 0.002,
-  maxAreaFraction: 0.5,
+  maxAreaFraction: 0.9,
   minAspect: 1.15,
   maxAspect: 1.8,
 } as const;
+
+/**
+ * Local-contrast passes used to outline cards. Each marks pixels at least
+ * `contrast` grey levels darker than their neighbourhood (box blur of radius
+ * `window`), which draws a thin ring on the surface just outside every card
+ * edge and survives glare and uneven light that defeat a global threshold.
+ * No single window closed every outline in the real photos used for
+ * validation (docs/08-PLAYING-CARDS.md); the union of these two did.
+ */
+const OUTLINE_PASSES = [
+  { window: 2, contrast: 7 },
+  { window: 5, contrast: 10 },
+] as const;
 
 /** Polygon tolerance as a fraction of contour length; absorbs rounded card corners. */
 const POLYGON_EPSILON_FRACTION = 0.03;
@@ -94,6 +105,9 @@ function intersect(a: Line, b: Line): Vec2 | null {
   return { x: a.point.x + t * a.direction.x, y: a.point.y + t * a.direction.y };
 }
 
+/** Distance from the first line fit within which a contour point still counts as on the edge. */
+const LINE_INLIER_PX = 1.5;
+
 /** Share of each side's contour, centred, used for the line fit; skips the rounded corners. */
 const SIDE_FIT_FRACTION = 0.7;
 
@@ -113,7 +127,13 @@ function refineCorners(contour: readonly Vec2[], polygon: readonly Vec2[]): Vec2
     const skip = Math.floor((span * (1 - SIDE_FIT_FRACTION)) / 2);
     const points: Vec2[] = [];
     for (let step = skip; step <= span - skip; step++) points.push(contour[(from + step) % contour.length]!);
-    const line = fitLine(points);
+    const rough = fitLine(points);
+    if (!rough) return null;
+    // A rank index or shadow that merged into the outline dents the side. Refit on
+    // the points that agree with the first fit so a dent cannot tilt the edge.
+    const inliers = points.filter((p) =>
+      Math.abs((p.x - rough.point.x) * rough.direction.y - (p.y - rough.point.y) * rough.direction.x) <= LINE_INLIER_PX);
+    const line = inliers.length >= points.length / 2 ? fitLine(inliers) : rough;
     if (!line) return null;
     lines.push(line);
   }
@@ -125,6 +145,24 @@ function refineCorners(contour: readonly Vec2[], polygon: readonly Vec2[]): Vec2
     corners.push(corner);
   }
   return corners;
+}
+
+/** Grows every marked pixel by one pixel in all directions, closing hairline gaps in an outline. */
+function dilate(image: CvImage): void {
+  const { width, height, data } = image;
+  const rows = new Uint8Array(data.length);
+  for (let y = 0; y < height; y++) {
+    const row = y * width;
+    for (let x = 0; x < width; x++) {
+      rows[row + x] = data[row + x]! | (x > 0 ? data[row + x - 1]! : 0) | (x < width - 1 ? data[row + x + 1]! : 0);
+    }
+  }
+  for (let y = 0; y < height; y++) {
+    const row = y * width;
+    for (let x = 0; x < width; x++) {
+      data[row + x] = rows[row + x]! | (y > 0 ? rows[row + x - width]! : 0) | (y < height - 1 ? rows[row + x + width]! : 0);
+    }
+  }
 }
 
 /** True when `point` is inside a convex polygon whose corners run clockwise on screen. */
@@ -140,9 +178,10 @@ function centroid(corners: CardCorners): Vec2 {
 }
 
 /**
- * Finds bright, convex, card-proportioned quadrilaterals. Cards must contrast
- * with the surface and must not touch or overlap each other or the frame edge.
- * Pure given `cv`; allocates per call, so run it at the capture cadence, not per paint.
+ * Finds convex, card-proportioned quadrilaterals whose whole edge is brighter
+ * than the surface beside it. Cards must not touch or overlap each other or the
+ * frame edge. Pure given `cv`; allocates and makes two contour passes per call,
+ * so run it at the capture cadence, not per paint.
  */
 export function detectCardQuads(cv: CvApi, frame: Frame, options: QuadOptions = {}): CardQuad[] {
   assertFrame(frame);
@@ -151,23 +190,31 @@ export function detectCardQuads(cv: CvApi, frame: Frame, options: QuadOptions = 
   const grey: CvImage = { width: 0, height: 0, data: new Uint8Array(pixels) };
   const binary: CvImage = { width: 0, height: 0, data: new Uint8Array(pixels) };
   cv.grayscale(frame, grey);
-  cv.threshold(grey, binary, options.threshold ?? cv.otsu(grey));
-  const contours = cv.findContours(binary, new Int32Array((frame.width + 2) * (frame.height + 2)));
+  // The shortest outline that could enclose the minimum area is a circle's.
+  const minContourLength = 2 * Math.sqrt(Math.PI * settings.minAreaFraction * pixels);
+  const inFrame = (p: Vec2) => p.x >= -1 && p.y >= -1 && p.x <= frame.width && p.y <= frame.height;
 
   const candidates: { corners: CardCorners; area: number }[] = [];
-  for (const contour of contours) {
-    if (contour.hole || contour.length < 8) continue;
-    const polygon = cv.approxPolyDP(contour, contour.length * POLYGON_EPSILON_FRACTION);
-    if (polygon.length !== 4 || !cv.isContourConvex(polygon)) continue;
-    const areaFraction = Math.abs(signedArea(polygon)) / pixels;
-    if (areaFraction < settings.minAreaFraction || areaFraction > settings.maxAreaFraction) continue;
-    const { corners, aspect } = orderCorners(refineCorners(contour, polygon) ?? polygon);
-    if (aspect < settings.minAspect || aspect > settings.maxAspect) continue;
-    candidates.push({ corners, area: areaFraction });
+  for (const pass of OUTLINE_PASSES) {
+    cv.adaptiveThreshold(grey, binary, pass.window, pass.contrast);
+    dilate(binary);
+    const contours = cv.findContours(binary, new Int32Array((frame.width + 2) * (frame.height + 2)));
+    for (const contour of contours) {
+      // The card is the hole enclosed by its ring; the ring's outer side is ragged with surface texture.
+      if (!contour.hole || contour.length < minContourLength) continue;
+      const polygon = cv.approxPolyDP(contour, contour.length * POLYGON_EPSILON_FRACTION);
+      if (polygon.length !== 4 || !cv.isContourConvex(polygon)) continue;
+      const { corners, aspect } = orderCorners(refineCorners(contour, polygon) ?? polygon);
+      if (aspect < settings.minAspect || aspect > settings.maxAspect || !corners.every(inFrame)) continue;
+      const areaFraction = Math.abs(signedArea(corners)) / pixels;
+      if (areaFraction < settings.minAreaFraction || areaFraction > settings.maxAreaFraction) continue;
+      candidates.push({ corners, area: areaFraction });
+    }
   }
 
-  // A pale panel printed on a card face is itself a bright card-shaped quad.
-  // Keep only outermost quads: largest first, dropping any centred inside a kept one.
+  // Both passes usually find the same card, and a printed frame or pale panel on a
+  // face is itself card-shaped. Keep only outermost quads: largest first, dropping
+  // any centred inside a kept one.
   const quads: CardQuad[] = [];
   for (const candidate of candidates.sort((a, b) => b.area - a.area)) {
     const centre = centroid(candidate.corners);
