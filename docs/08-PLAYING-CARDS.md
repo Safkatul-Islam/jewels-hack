@@ -12,11 +12,11 @@ that integration. Last updated 2026-11-14.
   card was rejected every time (details below).
 - **Not verified:** a live camera, video frames, motion blur, the webcam or phone bridge,
   other cards, other tables or lighting, and running inside the browser build.
-- Nine synthetic test groups pass. The photos are not committed, so there is no automated
-  regression test on real images yet.
+- Nine synthetic test groups and three real-photo test groups pass.
 
 ```text
 npx tsx --test lib/vision/cards/cards.test.ts
+npx tsx --test lib/vision/cards/realCards.test.ts
 ```
 
 There is no package script for this; `package.json` belongs to P1 and was not edited.
@@ -129,6 +129,15 @@ threshold change. No single window size closed every outline (17-19 of 21, becau
 locally removes the contrast between card and table); the union of two windows did. The
 two windows were selected on these nine photos, so treat 21 of 21 as fitted, not held out.
 
+**Committed fixtures.** With the owner's approval, three of the photos are in
+`lib/vision/cards/fixtures/` as PNG at 1280 px (about 3.7 MB together, re-encoded without
+metadata): `real-three-upright` (photo 9), `real-three-oblique` (photo 2) and
+`real-three-turned` (photo 7). `realCards.test.ts` enrolls all three cards from the upright
+photo, with the king and queen declared `pointSymmetric`, and checks the other two:
+identities, ace heading, and rejection of whichever card is left un-enrolled. With that
+enrollment the scores are 0.841-0.991 and runner-ups 0.331-0.500. `pngFixture.ts` is a
+test-only reader for those files (8-bit RGB/RGBA PNG); it is not for application use.
+
 Cost: `recognizeCards` averaged about 56 ms per 1280-px photo in Node on the development
 laptop (25 ms for outline detection on a clean synthetic frame). That is too slow to run
 on every frame next to ArUco at 10 Hz without measuring in the browser first.
@@ -181,6 +190,5 @@ No external recognition service, model or network call is used. No camera was op
    decision on whether enrolled appearances persist across reloads.
 3. Verify the `js-aruco2/src/cv.js` import in the Next.js build and measure per-frame
    cost in the browser alongside ArUco detection; consider running cards at a lower rate.
-4. With the owner's agreement, commit two or three of the photos as fixtures so the
-   real-card result becomes a regression test. A photo of the king alone would make its
-   enrollment independent.
+4. A photo of each card alone, especially the king, would let the real test exercise
+   `enrollCard` itself and make every enrollment independent of the test photos.
