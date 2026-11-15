@@ -2,10 +2,11 @@
 
 // components/gesture/HoverHighlight.tsx — P4
 //
-// This layer is the cursor. There is no dot drawn at the hand — deliberately —
-// so the only feedback that a hand is pointing at something is that the thing
-// itself lights up. That makes this component load-bearing rather than
-// decorative, and it sets the requirements:
+// This layer is the real cursor. There IS a dot at the hand (HandCursors), but
+// it is deliberately faint and says only "your hand is here" — what tells you
+// that a hand is pointing at something is that the thing itself lights up. That
+// makes this component load-bearing rather than decorative, and it sets the
+// requirements:
 //
 //   - It must be unmistakable at a glance, from across a room, while someone
 //     is waving their arms around. Hence a full ring plus corner ticks plus the

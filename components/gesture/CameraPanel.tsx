@@ -2,16 +2,14 @@
 
 // components/gesture/CameraPanel.tsx — P4
 //
-// The camera preview, and the answer to the question the design creates: if
-// nothing is drawn at your hand on the canvas, how do you know where your hands
-// are? Here — as a skeleton in a 200 px preview, inside a box showing the slice
-// of the frame that maps to the canvas.
+// The camera preview. The faint dot on the canvas (HandCursors) says where your
+// hand is pointing; this answers the question the dot cannot — where your hands
+// are relative to the slice of the frame that reaches the canvas at all.
 //
-// That turns out to be better than an on-canvas cursor rather than a compromise
-// for it. A dot on the canvas tells you where one point is; this tells you
-// where your hands are relative to the region, which is what you actually need
-// in order to correct, and it does it without putting anything on top of the
-// plan you are trying to read.
+// Those are different problems. A hand drifting toward the edge of the active
+// region still has a dot on the canvas, pinned to the edge and looking fine,
+// while half your reach has quietly disappeared. The dashed box here is where
+// that becomes visible, and where you see the fist-reset land.
 
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { HAND_CONNECTIONS } from '@/lib/vision/landmarks';

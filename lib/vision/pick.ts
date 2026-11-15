@@ -2,15 +2,16 @@
 //
 // What is the hand pointing at. Pure, screen-space, no React.
 //
-// Nothing is drawn at the hand, so this function IS the cursor: the only way a
-// user knows where their hand is pointing is that the thing it would grab
-// lights up. Two consequences, both deliberate:
+// The hand is marked only by a faint dot, so this function is what a user
+// actually aims with: the way they know what they would grab is that it lights
+// up. Two consequences, both deliberate:
 //
 //   1. Nearest-within-slop, not containment. Hand tracking leaves a couple of
 //      pixels of residual jitter after smoothing, and a facility drawn at a
 //      quarter-pixel-per-metre is a handful of pixels wide. Requiring the
-//      pointer to land inside it would make small pieces unpickable, and the
-//      user — with no cursor to see — would have no idea why.
+//      pointer to land inside it would make small pieces unpickable — and a
+//      14 % opacity dot is not something you can aim precisely enough to tell
+//      why nothing happened.
 //   2. Big things do not swallow small ones. The score is distance from the
 //      EDGE, so a small piece sitting next to a large one still wins when the
 //      hand is nearer to it.

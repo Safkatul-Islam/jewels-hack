@@ -14,8 +14,9 @@
 //
 // THE INTERACTION, AND WHY IT IS SHAPED THIS WAY:
 //
-//   Hover    an open hand moves an INVISIBLE pointer; the piece under it
-//            highlights. Nothing is drawn at the hand itself.
+//   Hover    an open hand moves a pointer drawn as a faint dot; the piece under
+//            it highlights. The highlight is the signal, the dot is just
+//            "your hand is here" for when nothing is near enough to highlight.
 //   Grab     pinch (thumb to index) on a highlighted piece picks it up; the
 //            highlight switches to a held state. Release drops it, and that is
 //            the one moment the simulation runs (AGENTS.md §2.7).
@@ -37,6 +38,7 @@ import { RoadLayer } from '@/components/plan/RoadLayer';
 import { WorldLayer } from '@/components/plan/WorldLayer';
 import { footprintFor } from '@/components/plan/facilityGeometry';
 import { CameraPanel, type CameraPanelHandle } from '@/components/gesture/CameraPanel';
+import { HandCursors, type HandCursorsHandle } from '@/components/gesture/HandCursors';
 import { HoverHighlight } from '@/components/gesture/HoverHighlight';
 import {
   type GestureFrame,
@@ -103,6 +105,7 @@ export function GestureCanvas({ onCommit }: Props) {
 
   const hostRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<CameraPanelHandle>(null);
+  const cursorsRef = useRef<HandCursorsHandle>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [view, setView] = useState<ViewState>(IDENTITY_VIEW);
   /** The current view, readable from the frame loop without a stale closure. */
@@ -192,6 +195,8 @@ export function GestureCanvas({ onCommit }: Props) {
     viewGesture.current = null;
     setHovered([]);
     setHeld([]);
+    // No frames are coming, so nothing else will hide the dots.
+    cursorsRef.current?.update(new Map());
   }, [endRole]);
 
   /**
@@ -228,8 +233,8 @@ export function GestureCanvas({ onCommit }: Props) {
       const s = scene.current;
       if (!s || s.width === 0) return;
 
-      // Hands in canvas pixels. This is the invisible pointer; the only thing
-      // the user ever sees of it is what lights up underneath.
+      // Hands in canvas pixels. Drawn only as a faint dot (HandCursors) — what
+      // the user actually reads is the piece lighting up underneath.
       const pts = new Map<HandSide, { p: Vec2; phase: string; visible: boolean }>();
       for (const hand of frame.hands) {
         pts.set(hand.side, {
@@ -238,6 +243,7 @@ export function GestureCanvas({ onCommit }: Props) {
           visible: hand.landmarks.length > 0,
         });
       }
+      cursorsRef.current?.update(pts);
 
       const targets: PickTarget[] = s.pieces
         .filter((piece) => !piece.locked)
@@ -482,6 +488,9 @@ export function GestureCanvas({ onCommit }: Props) {
           {/* Above the pieces, so the ring is never buried under a facility,
               and pointer-events-none so the mouse still reaches them. */}
           <HoverHighlight pieces={world.pieces} bbox={bbox} t={t} hovered={hovered} grabbed={held} />
+          {/* Topmost, so the dot is never lost under a facility — it is faint
+              enough that sitting on top costs the drawing nothing. */}
+          <HandCursors ref={cursorsRef} />
         </svg>
       )}
 

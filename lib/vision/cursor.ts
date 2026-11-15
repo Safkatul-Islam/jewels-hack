@@ -1,14 +1,13 @@
 // lib/vision/cursor.ts — P4
 //
 // Camera space → canvas pixels, and the recentre that fixes it when your hands
-// have drifted. There is no drawn cursor on the canvas: the hovered element
-// highlights instead, so this module's output is an invisible pointer and the
-// feedback is somewhere else entirely (HoverHighlight).
+// have drifted. The output is drawn only as a faint dot (HandCursors); the
+// feedback that matters happens on the hovered element (HoverHighlight).
 //
-// That choice puts a requirement on this file: the mapping has to be stable and
-// predictable, because the user cannot see it to correct for it. A drifting or
-// non-linear mapping that would merely feel sloppy with a visible dot is
-// unusable without one.
+// That puts a requirement on this file: the mapping has to be stable and
+// predictable. The dot is faint enough that a user is not watching it closely
+// enough to correct for a drifting or non-linear mapping, so anything that
+// would merely feel sloppy with a proper cursor reads as broken here.
 
 import type { Vec2 } from '@/lib/sim/types';
 
@@ -72,9 +71,10 @@ export function anchorToCanvas(
  * comfortable position the neutral one.
  *
  * This is not a nicety. Arms drift — you reach right to move a shuttle hub and
- * your whole working envelope has shifted right, and because nothing is drawn
- * at the pointer there is no visual cue telling you why the canvas edge now
- * feels closer on one side. One deliberate gesture puts it back.
+ * your whole working envelope has shifted right. The dot shows you the pointer
+ * is lagging behind your hand, but not why, and nothing on the canvas tells you
+ * that the edge has quietly got closer on one side. One deliberate gesture puts
+ * it back; the camera preview's dashed box is where you see it happen.
  *
  * With both hands up it recentres on their midpoint, which preserves their
  * left/right relationship instead of stacking both pointers in the middle.

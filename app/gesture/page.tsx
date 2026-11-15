@@ -132,13 +132,13 @@ export default function GesturePage() {
 }
 
 /**
- * The gestures, written down. Not optional: there is no cursor drawn on the
- * canvas, so a first-time user has no way to discover that a pinch is the
- * clutch or that a fist recentres. Five lines of text is the whole onboarding.
+ * The gestures, written down. Not optional: the dot at your hand says where you
+ * are and nothing else, so a first-time user has no way to discover that a
+ * pinch is the clutch or that a fist recentres. Five lines is the onboarding.
  */
 function GestureLegend() {
   const rows: { gesture: string; does: string }[] = [
-    { gesture: 'Move a hand', does: 'highlights what you would grab' },
+    { gesture: 'Move a hand', does: 'a faint dot follows it · what you would grab lights up' },
     { gesture: 'Pinch', does: 'pick it up · release to drop and re-simulate' },
     { gesture: 'Pinch + other hand', does: 'turn the piece you are holding' },
     { gesture: 'Pinch empty space', does: 'pan · both hands to zoom' },

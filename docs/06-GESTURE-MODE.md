@@ -33,27 +33,31 @@ to discover that.
 
 | Gesture | What it does |
 |---|---|
-| Move a hand | Highlights the piece you would grab. **Nothing is drawn at your hand.** |
+| Move a hand | A faint dot follows it, and the piece you would grab highlights. |
 | Pinch (thumb to index) | Picks up the highlighted piece. Release drops it — and that is the one moment the simulation runs. |
 | Pinch with the other hand while holding | Rotates the held piece. The angle between your hands is its bearing. Snaps to 15°. |
 | Pinch empty space | Pans. Both hands, pull apart → zoom. |
 | Hold a fist (~350 ms) | Recentres: wherever your hands are now becomes the middle of the canvas. |
 
-### Why there is no cursor dot
+### Why the cursor is barely there
 
 Feedback lives on the target, not at the hand: the piece under your hand lights up with a
-ring, corner ticks and its name. Where your hands *are* is answered by the camera preview
-in the bottom-left, which draws the hand skeleton inside a dashed box showing the slice of
-the frame that maps to the canvas.
+ring, corner ticks and its name. That is what you read.
 
-That turns out to be better than a dot rather than a compromise for one. A dot tells you
-where one point is; the preview tells you where your hands are *relative to the region*,
-which is what you need in order to correct — and it does it without putting anything on
-top of the plan you are reading.
+The dot at the hand is deliberately faint — 14 % opacity at rest, 34 % while pinching —
+because it has exactly one job: telling you where your hand is when nothing is near enough
+to highlight. Without it you are waving at a map with no idea whether you are off by ten
+pixels or six inches. Drawn any stronger it competes with the highlight for attention
+while adding nothing, since you already know you moved your hand.
 
-It does put a requirement on `lib/vision/pick.ts`: picking is **nearest-within-44px**, not
-containment. With no cursor to aim, a user whose hand is three pixels off a small facility
-has no way to find out why nothing is happening.
+Where your hands are *relative to the reachable area* is a different question, and the
+camera preview in the bottom-left answers it: the hand skeleton inside a dashed box showing
+the slice of the frame that maps to the canvas. That is the one to look at when the
+recentre gesture is what you need.
+
+None of this changes what picking does. It is **nearest-within-44px**, not containment
+(`lib/vision/pick.ts`): a dot that faint is not something you can aim precisely, and a user
+three pixels off a small facility would have no way to find out why nothing happened.
 
 ## The four things that make or break it
 
