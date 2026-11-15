@@ -21,7 +21,9 @@ export function markersInWorld(markers: PixelMarker[], calibration: Calibration)
       // Local marker up is its canonical top-edge normal. 0 points north, +pi/2 east.
       const rotation=Math.atan2(-(b.y-a.y), b.x-a.x);
       if (![pos.x,pos.y,rotation].every(Number.isFinite)) return [];
-      return [{markerId:marker.id,pos,rotation,confidence:Math.max(0,1-(marker.hammingDistance??0)/6)}];
+      const confidence = marker.confidence ?? Math.max(0, 1 - (marker.hammingDistance ?? 0) / 6);
+      if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) return [];
+      return [{markerId:marker.id,pos,rotation,confidence}];
     } catch { return []; }
   });
 }
