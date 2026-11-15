@@ -36,6 +36,7 @@ unusually sharp example of the general problem. Swap the file and the whole worl
 | [05-DECISIONS.md](docs/05-DECISIONS.md) | Reference | Why things are this way, and what's still unverified |
 | [06-P4-HANDOFF.md](docs/06-P4-HANDOFF.md) | P4 / integration | Table setup, marker printing, calibration, checks and remaining work |
 | [07-ENGINEERING-NOTES.md](docs/07-ENGINEERING-NOTES.md) | Everyone | Researched sources and owner-approved engineering decisions |
+| [09-CARD-TABLE-INTEGRATION.md](docs/09-CARD-TABLE-INTEGRATION.md) | P4 / demo | Playing-card enrollment, synthetic demo, checks and limitations |
 
 ## Status
 
@@ -49,7 +50,8 @@ npm run dev
 ```
 
 Open `/plan` for mouse planning, `/table` for marker input, and `/markers/index.html`
-for printing. Start table testing with **Load marker test** before connecting a camera.
+for the optional ArUco print pack. Start table testing with **Load card demo** before
+connecting a camera. Playing Cards is the default input; ArUco remains selectable.
 Run `npm run test:vision`, `npm run typecheck`, `npm run lint`, and `npm run build`
 for software checks. See the P4 handoff for physical acceptance and camera setup.
 

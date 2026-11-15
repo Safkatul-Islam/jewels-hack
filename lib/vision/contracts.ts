@@ -5,7 +5,13 @@ import type { PieceKind, Vec2 } from '../sim/types';
 // detector output and vision-specific settings are defined here.
 export type { Vec2, PieceKind, Piece as VisionPiece, WorldState as VisionWorld, MarkerReading } from '../sim/types';
 export { MARKER_MAP } from '../sim/types';
-export interface PixelMarker { id: number; corners: Vec2[]; hammingDistance?: number }
+export interface PixelMarker {
+  id: number;
+  corners: Vec2[];
+  hammingDistance?: number;
+  /** Optional card-match heuristic in [0,1], not a calibrated probability. */
+  confidence?: number;
+}
 export const DICTIONARY = 'ARUCO_MIP_36h12';
 export const PIECE_LABELS: Record<string, string> = {
   venue: 'Venue / calibration A', anchor: 'Arrival / calibration B', shuttle_hub: 'Shuttle hub',

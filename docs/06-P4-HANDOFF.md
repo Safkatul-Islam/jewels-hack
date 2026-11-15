@@ -3,8 +3,40 @@
 Local branch: `p4-vision-table`. Pushes require explicit owner approval.
 P1's `peter` scaffold was merged locally with owner approval. On 2026-11-14 the owner
 also approved a local merge of `origin/main` at `45352bc` (engine, `/plan` wiring, voice
-advisor, landing page) as `8fb1496`. Nothing after `b543844` has been pushed. The implementation
+advisor, landing page) as `8fb1496`. With owner approval the branch was pushed to `origin/p4-vision-table` through `5faae26`; later commits are local until a new approval. The implementation
 uses the root Next.js app and React Three Fiber; the standalone Vite lab is retired.
+
+Current owner-approved priority: finish software acceptance, then replace printed input
+with enrolled regular playing cards. Codex owns existing P4 software in this checkout
+on `p4-vision-table`. Claude owns new `lib/vision/cards/**` files/tests and
+`docs/08-PLAYING-CARDS.md` in the separate sibling `jewel-city-hacks-cards` worktree,
+branch `p4-playing-cards`, starting at `a8af439`. Neither agent edits the other's files.
+Further card-module merges and all pushes require the agreed review/approval steps.
+The ArUco path and printable pack remain available as existing fallback/test inputs.
+
+Update: the owner approved merging the card module at `3606196` and adding enrollment
+to `/table`; local merge `e601d0c` completed without conflict. Playing Cards is now the
+default input, with an ArUco fallback, separate synthetic card demo, session-only
+enrollment, role selection and manual half-turn correction. See
+`docs/09-CARD-TABLE-INTEGRATION.md` for the current user flow and checks. Later Claude
+changes and any push still need separate approval. Physical-card recognition remains
+unverified by Codex; Claude is handling real-photo checks separately.
+
+Final core update: the owner approved local merge of Claude's `110e246` (merge
+`fd2ee48`), including the local-contrast detector and three real-photo PNG fixtures.
+The combined suite now passes 29 groups, including those real-photo regressions.
+Enrollment exposes `pointSymmetric`: check it for the king/queen; uncheck it for the
+ace of spades. The UI defaults conservatively to two-headed on a new role. Card input
+uses a 1280 px long-side cap to match the photo validation and a 5 Hz processing
+cadence; ArUco remains 10 Hz and runs only in its own input mode. The synthetic demo
+now uses separated 120 px-wide cards (the old 52 px demo was below the updated size
+limit). Keep physical cards at least 110 px across, separated and fully in frame.
+Live-camera recognition is still not verified. No push is authorized by this update.
+Final updated build/typecheck/lint pass. The production smoke check recognized all
+three 120 px sample faces at scores near 1.00, rendered the 3D models, and accepted a
+normal Confirm after movement/rotation. That run took 452 ms, still over the 200 ms
+target. Use live capture only after a quick actual-deck check; the labelled synthetic
+card demo remains the verified fallback. P3/P1 coordination notes below still apply.
 
 ## Run and demonstrate
 
@@ -16,11 +48,12 @@ npm run dev
 ```
 
 Open **http://localhost:3000/table** (use the port printed by Next.js).
-Click **Load marker test**, move the position slider, enable **3D models**, then
+Click **Load card demo**, move the position slider, enable **3D models**, then
 **Confirm plan**. Follow **Open planner** to see the confirmed pieces through P1's
 shared Zustand store. Client navigation preserves that store; a full reload resets it.
 
-The generated input goes through the **real js-aruco2 detector**. It is synthetic,
+The generated input goes through the **real card recognizer** (or js-aruco2 detector
+when ArUco is selected). It is synthetic,
 clearly labelled, and does not establish physical camera performance. Draft movements
 remain local to the capture session until Confirm. Confirm writes the full world to
 the shared store, then runs P3's `buildNetwork` and `simulate` **once** and stores the
@@ -103,8 +136,9 @@ session resets, RAF cleanup, media tracks, image bitmaps and object URLs.
 
 `TableSession<WorldState>` owns draft/confirmed separation. `markersToWorld` performs
 immutable upserts, adopts an existing unmarked piece of the same kind, and preserves
-stable IDs, capacities and locked pieces. The route uses `setWorld` and `setResult(null)`
-only on explicit Confirm. P1's map layers and coordinate transform render the draft.
+stable IDs, capacities and locked pieces. Explicit Confirm calls `setWorld`, then
+builds/simulates once and stores the network/result; a failed run clears stale outputs.
+P1's map layers and coordinate transform render the draft.
 
 `components/three/MarkerScene.tsx` is a client-only, dynamically imported R3F Canvas.
 `PieceModel.tsx` provides original primitive models for all nine kinds: stadium bowl,
@@ -141,12 +175,29 @@ the convention dependency or the run time. See `fixtures/SCENARIOS.md`.
 
 ## Verification and physical acceptance
 
-Thirteen automated test groups pass: real dictionary IDs/rotations, blank frames, overhead
+Fourteen automated test groups pass: real dictionary IDs/rotations, blank frames, overhead
 orientation/origin/scenario distances, perspective interior points and degenerate
 calibration, immutable/locked pieces, jitter/occlusion, Confirm gating, fixture
 connectivity, camera replacement/late-stream cleanup, overlay coordinates, frame-rate
-independent shortest-path rotation, and context-loss listener cleanup. Typecheck, lint and the
+independent shortest-path rotation, context-loss listener cleanup, and stationary-marker
+confidence degradation/recovery. Typecheck, lint and the
 Next.js production build pass.
+
+Codex acceptance after `a8af439` (2026-11-14): the merged production build, typecheck,
+lint and original 13 tests passed. A normal foreground Chrome click on Confirm ran
+the real engine; navigation to `/plan` retained that run (302 ms) without rerunning.
+The Rose Bowl baseline score was 57.9; after moving/rotating generated pieces and
+Confirm, it was 56.3. Baseline runtime was 216 ms. These individual observations exceed
+the 200 ms target and are not a hardware performance guarantee; engine tuning remains
+P3's responsibility. Four-corner calibration completed, and scenario switching cleared
+calibration and disabled Confirm. Route departure/return cleared capture. Browser Back
+once restored older cached wording; a reload showed the current production response.
+
+This pass found and fixed stale tracking confidence: a marker below the movement
+threshold retained an earlier high confidence, allowing an uncertain stationary
+reading to pass Confirm. Geometry remains smoothed, while confidence now follows the
+current reading immediately. The regression failed before the fix and passes after
+it, including immediate recovery without movement. The suite now has 14 passing groups.
 
 After the `main` merge (2026-11-14): typecheck, lint and the 13 vision test groups pass
 with the engine wiring; the production build passed on the merged tree before the wiring

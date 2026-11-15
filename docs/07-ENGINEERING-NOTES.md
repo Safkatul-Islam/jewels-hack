@@ -107,6 +107,23 @@ physical pose estimation, shared contract changes or simulation changes. Geometr
 interpolation and context-loss cleanup have automated checks; actual printed detection
 and real GPU-driver failure remain unverified.
 
+## Playing-card application integration (2026-11-14)
+
+Owner approval covered local merge of `3606196` and a Playing Cards mode with memory-only
+enrollment, role selection and manual half-turn correction. Merge `e601d0c` added only
+Claude's seven agreed files. The adapter and UI use the installed CV code described in
+`docs/08-PLAYING-CARDS.md`; the `js-aruco2/src/cv.js` deep import works in the Next.js dev
+browser. No dependency, shared simulation type or engine change was needed.
+
+Evidence: 25 combined tests, typecheck, lint and the production build pass. The browser exercised automatic
+sample enrollment, manual three-role enrollment, multi-card rejection, local synthetic
+PNG enrollment, reference retention across client routes, calibration recovery, manual
+flip, ArUco fallback and card-driven simulation. See `docs/09-CARD-TABLE-INTEGRATION.md`.
+These are software checks, not real-deck or live-camera acceptance. Real and demo
+references are separate and are never persisted or uploaded.
+The production browser also recognized all three sample faces and ran the real engine
+on a normal Confirm click. Its 406 ms run remains above the 200 ms target.
+
 ## Instruction-file acceptance
 
 Check AGENTS.md is under 200 lines, its local Markdown links resolve, its commands match

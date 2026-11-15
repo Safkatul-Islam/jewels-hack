@@ -14,6 +14,7 @@ import { MARKER_MAP, PIECE_LABELS } from '@/lib/vision/contracts';
 import { centre } from '@/lib/vision/calibration';
 import { DraftPlan } from './DraftPlan';
 import { useTableCapture } from './useTableCapture';
+import { CardSetup } from './CardSetup';
 
 const MarkerScene = dynamic(
   () => import('@/components/three/MarkerScene').then((module) => module.MarkerScene),
@@ -109,7 +110,7 @@ export default function TablePage() {
           <div>
             <p className="mb-2 text-[10px] tracking-[0.2em] text-muted-foreground">PHYSICAL IDEAS. VISIBLE TRADEOFFS.</p>
             <h1 className="text-3xl font-medium tracking-tight md:text-4xl">Bring the plan to the table.</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Move a printed piece. Confirm it into the shared planner.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Move a playing card. Confirm it into the shared planner.</p>
           </div>
           <ScenarioPicker />
         </div>
@@ -119,7 +120,7 @@ export default function TablePage() {
             <div className="flex items-center justify-between gap-3 border-b px-5 py-4 text-xs">
               <span>01 / Table view</span>
               <span className="text-muted-foreground" aria-live="off">
-                {view.source ? `${view.markers.length} markers · ${Math.round(view.processingMs)} ms processing` : 'Camera off'}
+                {view.source ? `${view.markers.length} matched pieces · ${Math.round(view.processingMs)} ms processing` : 'Camera off'}
               </span>
             </div>
             <div
@@ -134,6 +135,10 @@ export default function TablePage() {
               <video ref={capture.videoRef} muted playsInline className="hidden" aria-hidden="true" />
               <canvas ref={capture.canvasRef} width={1280} height={720} className="block h-full w-full" aria-label="Marker camera input" />
               <svg viewBox={`0 0 ${view.width} ${view.height}`} className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+                {view.cards.filter(card => card.identity === null).map((card, index) => <g key={`unassigned-${index}`}>
+                  <polygon points={card.corners.map(point => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#e6a842" strokeWidth={3} />
+                  <text x={card.corners[0].x} y={card.corners[0].y - 10} fill="#e6a842" fontSize={16}>Unassigned</text>
+                </g>)}
                 {view.markers.map((marker) => {
                   const point = centre(marker);
                   return (
@@ -152,14 +157,17 @@ export default function TablePage() {
               {!view.source && (
                 <div className="pointer-events-none absolute inset-0 grid place-content-center p-6 text-center">
                   <p className="text-3xl font-light">Your table, connected.</p>
-                  <p className="mt-3 text-sm text-muted-foreground">Start a camera, open a local recording,<br />or try generated marker images.</p>
+                  <p className="mt-3 text-sm text-muted-foreground">Start a camera, open a local image,<br />or try the synthetic card demo.</p>
                 </div>
               )}
               <p className="pointer-events-none absolute bottom-3 left-3 rounded bg-background/90 px-3 py-1 text-[9px] tracking-wider">
-                {view.source === 'test' ? 'GENERATED MARKER TEST · NO CAMERA' : 'LOCAL PROCESSING · NO VIDEO UPLOAD'}
+                {view.source === 'card-test' ? 'SYNTHETIC CARD DEMO · NO CAMERA' : view.source === 'test' ? 'GENERATED MARKER TEST · NO CAMERA' : 'LOCAL PROCESSING · NO VIDEO UPLOAD'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2 border-t p-4">
+              <select aria-label="Detection input" value={capture.inputMode} disabled={capture.busy} className="rounded-md border bg-background px-2 text-xs" onChange={event => capture.changeInput(event.target.value === 'cards' ? 'cards' : 'aruco')}>
+                <option value="cards">Playing Cards</option><option value="aruco">ArUco markers</option>
+              </select>
               <Button size="sm" disabled={!world || capture.busy} onClick={() => void capture.startCamera()}>Start camera</Button>
               <Button size="sm" variant="outline" disabled={!view.source && !capture.busy} onClick={capture.stop}>Stop</Button>
               <select aria-label="Camera device" value={capture.deviceId} className="rounded-md border bg-background px-2 text-xs" onChange={(event) => {
@@ -175,15 +183,20 @@ export default function TablePage() {
                 event.target.value = '';
               }} />
               <Button size="sm" variant="outline" disabled={!world || capture.busy} onClick={() => fileRef.current?.click()}>Open image / video</Button>
-              <Button size="sm" variant="outline" disabled={!world || capture.busy} onClick={() => void capture.loadTest()}>Load marker test</Button>
+              <Button size="sm" variant="outline" disabled={!world || capture.busy} onClick={() => void capture.loadTest()}>{capture.inputMode === 'cards' ? 'Load card demo' : 'Load marker test'}</Button>
             </div>
-            {view.source === 'test' && (
+            {capture.inputMode === 'cards' && <CardSetup enrollments={capture.enrollments} readings={view.cards}
+              canEnroll={Boolean(view.source) && !capture.busy} isDemo={view.source === 'card-test'}
+              onEnroll={capture.enroll} onChange={capture.updateEnrollment} />}
+            {(view.source === 'test' || view.source === 'card-test') && (
               <div className="space-y-3 border-t bg-muted/50 px-4 py-3 text-xs">
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-muted-foreground">GENERATED TEST / real detector</span>
-                  <select aria-label="Test piece" className="rounded-md border bg-background px-2 py-1" value={capture.testSettings.markerId} onChange={(event) => capture.changeTestSettings({ markerId: Number(event.target.value) })}>
+                  <span className="text-muted-foreground">SYNTHETIC INPUT / real detector</span>
+                  {view.source === 'card-test' ? <select aria-label="Card demo view" className="rounded-md border bg-background px-2 py-1" value={capture.demoRole ?? 'all'} onChange={event => capture.changeDemoRole(event.target.value === 'all' ? null : Number(event.target.value))}>
+                    <option value="all">All three sample cards</option><option value="0">Venue card only</option><option value="1">Arrival card only</option><option value="10">Shuttle card only</option>
+                  </select> : <select aria-label="Test piece" className="rounded-md border bg-background px-2 py-1" value={capture.testSettings.markerId} onChange={(event) => capture.changeTestSettings({ markerId: Number(event.target.value) })}>
                     {Object.entries(MARKER_MAP).filter(([id]) => Number(id) >= 10).map(([id, kind]) => <option key={id} value={id}>{id} / {PIECE_LABELS[kind]}</option>)}
-                  </select>
+                  </select>}
                 </div>
                 <div className="flex flex-wrap gap-x-5 gap-y-3">
                   <label className="flex items-center gap-2">Position<input aria-label="Test piece position" type="range" min={0} max={100} value={capture.testSettings.positionPercent} onChange={(event) => capture.changeTestSettings({ positionPercent: Number(event.target.value) })} /></label>
@@ -196,7 +209,7 @@ export default function TablePage() {
             <div className="flex flex-wrap items-center gap-3 border-t p-4 text-xs">
               <label className="flex flex-col gap-1.5">Calibration
                 <select aria-label="Calibration mode" value={capture.mode} onChange={(event) => capture.changeMode(event.target.value === 'planar' ? 'planar' : 'overhead')} className="rounded-md border bg-background px-3 py-2">
-                  <option value="overhead">Overhead · markers 0 + 1</option>
+                  <option value="overhead">Overhead · roles 0 + 1</option>
                   <option value="planar">Angled · four table corners</option>
                 </select>
               </label>

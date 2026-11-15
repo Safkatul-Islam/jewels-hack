@@ -16,11 +16,13 @@ export class MarkerTracker {
       const mean:MarkerReading={markerId:reading.markerId,
         pos:{x:samples.reduce((s,p)=>s+p.pos.x,0)/samples.length,y:samples.reduce((s,p)=>s+p.pos.y,0)/samples.length},
         rotation:Math.atan2(samples.reduce((s,p)=>s+Math.sin(p.rotation),0),samples.reduce((s,p)=>s+Math.cos(p.rotation),0)),
-        confidence:samples.reduce((s,p)=>s+p.confidence,0)/samples.length};
+        // Smooth geometry, but confidence must describe this frame's evidence.
+        confidence:reading.confidence};
       const old=previous?.accepted;
       const turn=old?Math.abs(Math.atan2(Math.sin(mean.rotation-old.rotation),Math.cos(mean.rotation-old.rotation))):Infinity;
       const moved=!old || Math.hypot(mean.pos.x-old.pos.x,mean.pos.y-old.pos.y)>=this.options.moveThresholdM || turn>=this.options.rotationThresholdRad;
-      this.tracks.set(reading.markerId,{samples,seen:now,accepted:moved?mean:old!});
+      const accepted = moved ? mean : { ...old!, confidence: reading.confidence };
+      this.tracks.set(reading.markerId,{samples,seen:now,accepted});
     }
     const result:TrackedReading[]=[];
     for(const [id,track] of this.tracks) {
