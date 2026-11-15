@@ -1,73 +1,58 @@
 // components/plan/basemapGeometry.ts — P1
 //
-// The city fabric under the plan: the building masses that make the canvas read
-// as a place rather than as graph paper.
+// The building fabric under the plan: what makes the canvas read as a place
+// rather than as a diagram on a dark field.
 //
-// Three rules it exists to satisfy:
+// Buildings are placed along STREET FRONTAGES, not on a lattice. That is the
+// whole idea, and the earlier version got it wrong: a jittered grid of parcels
+// is still a grid, and it read as graph paper no matter how much the roads
+// around it curved. Real cities line their streets — parcels follow the road,
+// turn when it turns, and leave the middle of a block hollow. Generating off
+// the road geometry means the fabric inherits whatever shape the network has,
+// so an organic network produces an organic city for free.
 //
-//   1. It is DERIVED, never authored. Every building is generated from the
-//      scenario's own bbox, roads, blocks and venue, so a new scenario JSON gets
-//      a city for free and nothing here hard-codes a place. (AGENTS.md §2.1 —
-//      no place names, distances or coordinates outside the scenario file.)
+// Three properties it has to keep:
 //
-//   2. It is DETERMINISTIC. A seeded LCG keyed off the bbox, so the same
-//      scenario draws the same city on four different laptops and across every
-//      re-render. No Math.random, no hydration mismatch, and the result can be
-//      cached by scenario id.
-//
-//   3. It is ONE PATH, not a thousand rects. A 3.9 x 3.4 km scenario yields
-//      roughly a thousand buildings; as individual elements they would make
-//      every hit test and repaint crawl. Emitting a single `d` string per tone
-//      keeps the whole backdrop at two DOM nodes.
-//
-// Buildings are kept clear of the roads, the blocks and the venue, so the
-// network cuts visible streets through the fabric instead of sitting on top of
-// a solid mat.
+//   1. DERIVED, never authored — everything comes from the scenario's own
+//      roads and venue, so a new scenario JSON gets a city and nothing here
+//      hard-codes a place (AGENTS.md §2.1).
+//   2. DETERMINISTIC — a seeded LCG keyed off the scenario, so the same world
+//      draws the same city on four laptops and across every re-render.
+//   3. TWO DOM NODES — a scenario this size yields well over a thousand
+//      parcels; as elements they would make every hit test crawl, so each tone
+//      is emitted as one long path.
 
-import type { BBox, Vec2, WorldState } from '@/lib/sim/types';
+import type { Vec2, WorldState } from '@/lib/sim/types';
 
-/** Spacing of the candidate lattice, in metres. Coarser than a real city block
- *  on purpose: this is texture at a 3-4 km viewport, not a survey. */
-const STEP_M = 86;
-
-/** Half-widths of a building, in metres, before jitter. */
-const MIN_SIZE_M = 26;
-const MAX_SIZE_M = 58;
-
-/** Keep-out distances. A building inside these reads as a mistake, not texture. */
-const ROAD_CLEAR_M = 34;
-const VENUE_CLEAR_M = 260;
-const BLOCK_CLEAR_M = 20;
+/** Distance along a street between parcels, in metres. */
+const PITCH_MIN = 30;
+const PITCH_MAX = 58;
+/** Setback from the road centreline to the building line. */
+const SETBACK_MIN = 15;
+const SETBACK_MAX = 27;
+/** Parcel size: frontage along the street, and depth back from it.
+ *  Generous for real buildings, deliberately: a whole district in frame puts
+ *  about a tenth of a pixel on a metre, and a true-to-life 15 m shopfront is
+ *  then invisible. These are the smallest sizes that still read as a street
+ *  wall at the fitted view, and they are texture, not surveyed footprints. */
+const FRONT_MIN = 20;
+const FRONT_MAX = 46;
+const DEPTH_MIN = 18;
+const DEPTH_MAX = 42;
+/** Gaps in the street wall. A continuous terrace reads as a wall, not a city. */
+const SKIP_CHANCE = 0.18;
+/** Nothing is built inside this radius of the venue — that is its apron. */
+const VENUE_CLEAR_M = 250;
 
 export interface BasemapGeometry {
-  /** Two tone buckets, each a single SVG path in WORLD metres (y up). */
   massLight: string;
   massDark: string;
-  /** Count, for the readout — it is honest about being generated. */
+  /** Parcels that fall inside a residential block, keyed by block id.
+   *  Split out so ResidentLayer can paint the homes a plan actually hurts.
+   *  They are drawn in the ordinary fabric colour until something happens to
+   *  them, so the city looks the same until the plan costs somebody. */
+  blockMass: { id: string; d: string }[];
   count: number;
-}
-
-function makeRng(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-    return s / 4294967296;
-  };
-}
-
-/** Squared distance from p to segment ab. Squared, because every use below is a
- *  comparison against a threshold and the sqrt is pure cost. */
-function distSqToSegment(p: Vec2, a: Vec2, b: Vec2): number {
-  const vx = b.x - a.x;
-  const vy = b.y - a.y;
-  const wx = p.x - a.x;
-  const wy = p.y - a.y;
-  const len2 = vx * vx + vy * vy;
-  let t = len2 > 0 ? (wx * vx + wy * vy) / len2 : 0;
-  t = t < 0 ? 0 : t > 1 ? 1 : t;
-  const dx = wx - t * vx;
-  const dy = wy - t * vy;
-  return dx * dx + dy * dy;
 }
 
 function pointInPolygon(p: Vec2, poly: readonly Vec2[]): boolean {
@@ -82,122 +67,133 @@ function pointInPolygon(p: Vec2, poly: readonly Vec2[]): boolean {
   return inside;
 }
 
-function bboxOf(points: readonly Vec2[]): BBox {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const p of points) {
-    if (p.x < minX) minX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { minX, minY, maxX, maxY };
+function makeRng(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
 }
 
-/**
- * Build the fabric. Pure, and cheap enough to call on a scenario switch
- * (~4k candidates, a few hundred segment tests each at worst) — but it is
- * cached by `basemapFor` below, which is what components should use.
- */
+/** One parcel, as a rotated rectangle aligned to the street it faces. */
+function parcel(
+  cx: number,
+  cy: number,
+  ax: number,
+  ay: number,
+  front: number,
+  depth: number,
+): string {
+  // (ax, ay) is the unit vector along the street; its perpendicular is the
+  // depth axis. Building the corners from those two keeps each parcel square to
+  // its own frontage however the road is turning.
+  const hx = (ax * front) / 2;
+  const hy = (ay * front) / 2;
+  const dx = (-ay * depth) / 2;
+  const dy = (ax * depth) / 2;
+  const p = (sx: number, sy: number) =>
+    `${(cx + hx * sx + dx * sy).toFixed(1)},${(cy + hy * sx + dy * sy).toFixed(1)}`;
+  return `M${p(-1, -1)}L${p(1, -1)}L${p(1, 1)}L${p(-1, 1)}Z`;
+}
+
 export function buildBasemapGeometry(world: WorldState): BasemapGeometry {
   const { bbox } = world;
   const rng = makeRng(
-    Math.round(bbox.minX * 7919 + bbox.maxY * 104729 + world.blocks.length * 31),
+    Math.round(
+      Math.abs(bbox.minX) * 7919 + Math.abs(bbox.maxY) * 104729 + world.baseRoads.length * 31,
+    ),
   );
-
-  // Flatten the roads once. Each seed is a polyline; we test against its
-  // segments, and segments are what the keep-out is really about.
-  const segments: { a: Vec2; b: Vec2 }[] = [];
-  for (const road of world.baseRoads) {
-    for (let i = 0; i < road.path.length - 1; i++) {
-      segments.push({ a: road.path[i], b: road.path[i + 1] });
-    }
-  }
-
-  // Buildings are drawn INSIDE the residential blocks too, and more densely.
-  // A block left empty reads as a park; a block packed with fabric reads as the
-  // several hundred people the contract says live there — which is who the plan
-  // is being charged against. Pre-compute each polygon's bbox so the expensive
-  // point-in-polygon test only runs for candidates that could be inside one.
-  const blocks = world.blocks.map((b) => ({ poly: b.polygon, box: bboxOf(b.polygon) }));
-
-  const roadClear2 = ROAD_CLEAR_M * ROAD_CLEAR_M;
-  const venueClear2 = VENUE_CLEAR_M * VENUE_CLEAR_M;
 
   const light: string[] = [];
   const dark: string[] = [];
   let count = 0;
 
-  // The lattice runs at half a step so residential blocks can be filled at
-  // double density; outside them, every other point is dropped. Indices rather
-  // than a float accumulator, because "is this a coarse point" has to be an
-  // exact test and `x % STEP_M === 0` never holds on an accumulated float.
-  const sub = STEP_M / 2;
-  const cols = Math.floor((bbox.maxX - bbox.minX) / sub);
-  const rows = Math.floor((bbox.maxY - bbox.minY) / sub);
+  // Blocks, with a bbox each so the point-in-polygon test only runs for
+  // parcels that could possibly be inside one.
+  const blocks = world.blocks.map((b) => {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of b.polygon) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    }
+    return { id: b.id, poly: b.polygon, minX, minY, maxX, maxY, parts: [] as string[] };
+  });
 
-  for (let ix = 0; ix <= cols; ix++) {
-    for (let iy = 0; iy <= rows; iy++) {
-      const x = bbox.minX + ix * sub;
-      const y = bbox.minY + iy * sub;
-      const coarse = ix % 2 === 0 && iy % 2 === 0;
-      const cx = x + (rng() - 0.5) * sub * 0.55;
-      const cy = y + (rng() - 0.5) * sub * 0.55;
-      const p = { x: cx, y: cy };
+  const venue = world.venue.pos;
+  const venueClear2 = VENUE_CLEAR_M * VENUE_CLEAR_M;
 
-      let inBlock = false;
-      for (const b of blocks) {
-        if (
-          cx >= b.box.minX - BLOCK_CLEAR_M &&
-          cx <= b.box.maxX + BLOCK_CLEAR_M &&
-          cy >= b.box.minY - BLOCK_CLEAR_M &&
-          cy <= b.box.maxY + BLOCK_CLEAR_M &&
-          pointInPolygon(p, b.poly)
-        ) {
-          inBlock = true;
-          break;
+  for (const road of world.baseRoads) {
+    for (let i = 0; i < road.path.length - 1; i++) {
+      const a: Vec2 = road.path[i];
+      const b: Vec2 = road.path[i + 1];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      if (segLen < 1) continue;
+      const ax = (b.x - a.x) / segLen;
+      const ay = (b.y - a.y) / segLen;
+
+      // Walk the segment, dropping a parcel on each side as we go. Starting at
+      // a random offset stops every street beginning with a building at the
+      // junction, which is the tell that something was generated.
+      let t = rng() * PITCH_MAX;
+      while (t < segLen) {
+        const pitch = PITCH_MIN + rng() * (PITCH_MAX - PITCH_MIN);
+
+        for (const side of [-1, 1] as const) {
+          if (rng() < SKIP_CHANCE) continue;
+
+          const setback = SETBACK_MIN + rng() * (SETBACK_MAX - SETBACK_MIN);
+          const depth = DEPTH_MIN + rng() * (DEPTH_MAX - DEPTH_MIN);
+          const front = Math.min(FRONT_MIN + rng() * (FRONT_MAX - FRONT_MIN), pitch - 4);
+          if (front < 6) continue;
+
+          // Centre of the parcel: along the street by t, out by the setback
+          // plus half the depth, on this side.
+          const off = setback + depth / 2;
+          const cx = a.x + ax * t + -ay * off * side;
+          const cy = a.y + ay * t + ax * off * side;
+
+          const dvx = cx - venue.x;
+          const dvy = cy - venue.y;
+          if (dvx * dvx + dvy * dvy < venueClear2) continue;
+          if (cx < bbox.minX || cx > bbox.maxX || cy < bbox.minY || cy > bbox.maxY) continue;
+
+          // A slight splay keeps the street wall from looking extruded.
+          const jx = ax + -ay * (rng() - 0.5) * 0.18;
+          const jy = ay + ax * (rng() - 0.5) * 0.18;
+          const jl = Math.hypot(jx, jy) || 1;
+
+          const d = parcel(cx, cy, jx / jl, jy / jl, front, depth);
+          // A parcel inside a residential block belongs to that block's bucket
+          // rather than to the general fabric, so it can be repainted later.
+          let claimed = false;
+          for (const b of blocks) {
+            if (cx < b.minX || cx > b.maxX || cy < b.minY || cy > b.maxY) continue;
+            if (!pointInPolygon({ x: cx, y: cy }, b.poly)) continue;
+            b.parts.push(d);
+            claimed = true;
+            break;
+          }
+          if (!claimed) (rng() < 0.24 ? dark : light).push(d);
+          count++;
         }
+
+        t += pitch;
       }
-
-      // Outside a block the lattice is coarse and thinned — a perfect grid of
-      // buildings reads as wallpaper. Inside one it stays fine-grained, so a
-      // residential block looks inhabited rather than paved.
-      if (!inBlock) {
-        if (!coarse) continue;
-        if (rng() < 0.22) continue;
-      }
-
-      const dvx = cx - world.venue.pos.x;
-      const dvy = cy - world.venue.pos.y;
-      if (dvx * dvx + dvy * dvy < venueClear2) continue;
-
-      let blocked = false;
-      for (const seg of segments) {
-        if (distSqToSegment(p, seg.a, seg.b) < roadClear2) {
-          blocked = true;
-          break;
-        }
-      }
-      if (blocked) continue;
-
-      const scale = inBlock ? 0.55 : 1;
-      const w = (MIN_SIZE_M + rng() * (MAX_SIZE_M - MIN_SIZE_M)) * scale;
-      const h = (MIN_SIZE_M + rng() * (MAX_SIZE_M - MIN_SIZE_M)) * scale;
-      // Axis-aligned. Rotated masses look hand-drawn; a map's footprints read as
-      // orthogonal even when the streets are not.
-      const subpath = `M${(cx - w / 2).toFixed(1)},${(cy - h / 2).toFixed(1)}h${w.toFixed(1)}v${h.toFixed(1)}h${(-w).toFixed(1)}Z`;
-      (rng() < 0.26 ? dark : light).push(subpath);
-      count++;
     }
   }
 
-  return { massLight: light.join(''), massDark: dark.join(''), count };
+  return {
+    massLight: light.join(''),
+    massDark: dark.join(''),
+    blockMass: blocks.filter((b) => b.parts.length > 0).map((b) => ({ id: b.id, d: b.parts.join('') })),
+    count,
+  };
 }
 
-// Cache by scenario id. A scenario switch is the only thing that invalidates it:
-// nothing the user does to a plan moves a building.
+// Cache by scenario id. A scenario switch is the only thing that invalidates
+// it: nothing the user does to a plan moves a building.
 const cache = new Map<string, BasemapGeometry>();
 
 export function basemapFor(world: WorldState): BasemapGeometry {

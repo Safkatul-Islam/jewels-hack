@@ -27,6 +27,13 @@ export interface ScenarioEntry {
 // `scenario` block rather than read out of it. Keep them in step with the file.
 export const SCENARIOS: ScenarioEntry[] = [
   {
+    id: 'arroyo',
+    name: 'Arroyo — illustrative venue district',
+    event: 'Major stadium event — planning sandbox',
+    blurb: '88,000 seats, ring roads and uneven spokes, 2.4 km to the interchange.',
+    load: () => import('@/fixtures/scenario-arroyo.json').then((m) => m.default),
+  },
+  {
     id: 'rosebowl',
     name: 'Rose Bowl, Pasadena — illustrative',
     event: 'Major stadium event — planning sandbox',

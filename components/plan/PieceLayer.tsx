@@ -22,6 +22,7 @@ import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { PIECE_META } from '@/lib/pieces';
 import { usePlanStore } from '@/lib/store';
+import { blockerKey, makeBlocker } from '@/components/plan/packing';
 import type { BBox, Piece } from '@/lib/sim/types';
 import { FacilityShape } from '@/components/plan/FacilityShape';
 import { footprintFor } from '@/components/plan/facilityGeometry';
@@ -53,6 +54,8 @@ export function PieceLayer({ pieces, bbox, t, onCommit }: Props) {
   const selectedId = usePlanStore((s) => s.selectedPieceId);
   const draggingId = usePlanStore((s) => s.draggingPieceId);
   const snapM = usePlanStore((s) => s.snapM);
+  const world = usePlanStore((s) => s.world);
+  const requested = usePlanStore((s) => s.requested);
 
   /** world-space offset from the pointer to the piece centre, so it doesn't jump */
   const grab = useRef<{ dx: number; dy: number } | null>(null);
@@ -75,7 +78,12 @@ export function PieceLayer({ pieces, bbox, t, onCommit }: Props) {
           x: (piece.pos.x - bbox.minX) * t.scale + t.tx,
           y: (bbox.maxY - piece.pos.y) * t.scale + t.ty,
         };
-        const sizeM = footprintFor(piece.kind, piece.capacity);
+        // The footprint is the land the plan TOOK, which is what was asked
+        // for — not the smaller number that fitted once the site pushed back.
+        const asked = requested[piece.id] ?? piece.capacity;
+        const sizeM = footprintFor(piece.kind, asked);
+        const blocked = world ? makeBlocker(world, { ...piece, capacity: asked }) : undefined;
+        const maskKey = world ? blockerKey(world, { ...piece, capacity: asked }) : '';
         const sizePx = Math.max(metresToPx(t, sizeM), 12);
         const half = sizePx / 2;
         const isSelected = selectedId === piece.id;
@@ -144,7 +152,9 @@ export function PieceLayer({ pieces, bbox, t, onCommit }: Props) {
 
               <FacilityShape
                 kind={piece.kind}
-                capacity={piece.capacity}
+                capacity={asked}
+                maskKey={maskKey}
+                blocked={blocked}
                 scale={t.scale}
                 color={meta.color}
                 dragging={isDragging}
@@ -169,6 +179,7 @@ export function PieceLayer({ pieces, bbox, t, onCommit }: Props) {
                   label={meta.label}
                   sizeM={sizeM}
                   capacity={piece.capacity}
+                  requested={asked}
                   unit={meta.unit}
                   onRotateStart={(e) => {
                     e.stopPropagation();
@@ -215,6 +226,7 @@ function SelectionFrame({
   label,
   sizeM,
   capacity,
+  requested,
   unit,
   onRotateStart,
   onRotateMove,
@@ -224,6 +236,7 @@ function SelectionFrame({
   label: string;
   sizeM: number;
   capacity: number;
+  requested: number;
   unit: string;
   onRotateStart: (e: React.PointerEvent<SVGCircleElement>) => void;
   onRotateMove: (e: React.PointerEvent<SVGCircleElement>) => void;
@@ -316,6 +329,19 @@ function SelectionFrame({
           className="fill-muted-foreground text-[9px] tabular-nums"
         >
           {capacity.toLocaleString('en-US')} {unit}
+        </text>
+      )}
+      {/* The whole point of packing the site: when the ground could not take
+          what was asked for, say so on the piece rather than silently
+          simulating a number nobody can see. */}
+      {requested > capacity + 0.5 && (
+        <text
+          y={half + 35}
+          textAnchor="middle"
+          className="fill-[var(--worse)] text-[9px] tabular-nums"
+        >
+          {Math.round(requested).toLocaleString('en-US')} asked ·{' '}
+          {Math.round(100 - (capacity / requested) * 100)}% lost
         </text>
       )}
     </g>

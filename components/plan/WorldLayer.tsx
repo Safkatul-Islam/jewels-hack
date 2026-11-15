@@ -26,7 +26,7 @@
 // telling you where you are, and it is why nothing here is drawn at 35% opacity
 // any more.
 
-import type { BBox, Vec2, WorldState } from '@/lib/sim/types';
+import type { BBox, WorldState } from '@/lib/sim/types';
 import { usePlanStore } from '@/lib/store';
 import { useWorldDrag } from '@/components/plan/useWorldDrag';
 import { type Transform, metresToPx, worldToScreen } from '@/lib/transform';
@@ -35,15 +35,6 @@ import { type Transform, metresToPx, worldToScreen } from '@/lib/transform';
 const SHOP_M = 16;
 /** Stadium bowl radius, metres — the outer wall, not the pitch. */
 const VENUE_R_M = 125;
-
-function centroid(points: Vec2[]): Vec2 {
-  if (points.length === 0) return { x: 0, y: 0 };
-  const n = points.length;
-  return {
-    x: points.reduce((s, p) => s + p.x, 0) / n,
-    y: points.reduce((s, p) => s + p.y, 0) / n,
-  };
-}
 
 export function WorldLayer({
   world,
@@ -57,10 +48,26 @@ export function WorldLayer({
   const bbox: BBox = world.bbox;
   const snapM = usePlanStore((s) => s.snapM);
   const moveBusiness = usePlanStore((s) => s.moveBusiness);
-  const moveBlock = usePlanStore((s) => s.moveBlock);
+  const result = usePlanStore((s) => s.result);
+  const baseline = usePlanStore((s) => s.baseline);
 
   const businessDrag = useWorldDrag({ t, bbox, snapM, onMove: moveBusiness, onCommit });
-  const blockDrag = useWorldDrag({ t, bbox, snapM, onMove: moveBlock, onCommit });
+
+  // What the PLAN did to each shop's takings, as a fraction: this run against
+  // the same world with no pieces in it.
+  //
+  // Not `perBusiness.deltaPct` — that compares with the shop's ordinary day,
+  // and during an egress it reaches five figures, so any fixed scale pins every
+  // shop on the corridor to full colour and a vendor village halving one of
+  // them changes nothing on screen. Against the no-piece baseline, halving a
+  // shop's conversion reads as -50%, which is the number a planner means.
+  const baseRev = new Map((baseline?.perBusiness ?? []).map((b) => [b.id, b.revenueUsd]));
+  const shopEffect = new Map(
+    (result?.perBusiness ?? []).map((b) => {
+      const was = baseRev.get(b.id);
+      return [b.id, was && was > 0 ? (b.revenueUsd - was) / was : 0];
+    }),
+  );
 
   const shopPx = Math.max(metresToPx(t, SHOP_M), 3.5);
   // Labels are clutter at the fitted view and information once you are in.
@@ -68,49 +75,57 @@ export function WorldLayer({
 
   return (
     <g data-slot="world">
-      {/* residential blocks — the people whose street this is. Drawn as solid
-          masses, not tinted regions: they are buildings, and the plan's cost
-          lands on them. */}
-      <g data-slot="blocks">
-        {world.blocks.map((b) => {
-          const dragging = blockDrag.draggingId === b.id;
-          return (
-            <g key={b.id} {...blockDrag.dragHandlers(b.id, centroid(b.polygon))}>
-              <polygon
-                points={b.polygon
-                  .map((p) => {
-                    const s = worldToScreen(t, p, bbox);
-                    return `${s.x.toFixed(1)},${s.y.toFixed(1)}`;
-                  })
-                  .join(' ')}
-                // The fabric draws buildings inside these polygons, so the fill
-                // is a tint over them rather than a slab: a block reads as a
-                // dense residential district, not as a green field.
-                fill="var(--block)"
-                fillOpacity={dragging ? 0.5 : 0.28}
-                stroke="color-mix(in oklab, var(--block), var(--plan-ink) 55%)"
-                strokeWidth={dragging ? 2 : 1.25}
-              />
-            </g>
-          );
-        })}
-      </g>
+      {/* Residential blocks are NOT drawn here, and are not draggable.
+          A block is a census fact, not a thing on the map: nobody relocates a
+          neighbourhood to improve an egress score, and the polygons read as
+          abstract shapes floating over the city anyway. The people in them are
+          already on screen — they are the buildings lining the streets — so
+          the cost to residents is painted onto that fabric instead, by
+          ResidentLayer. world.blocks stays in the data: the engine samples
+          resident trips from it and livability is scored off it. */}
 
       <g data-slot="businesses">
         {world.businesses.map((b) => {
-          const s = worldToScreen(t, b.pos, bbox);
+          const s2 = worldToScreen(t, b.pos, bbox);
           const dragging = businessDrag.draggingId === b.id;
-          const half = (dragging ? shopPx * 1.3 : shopPx) / 2;
+          // Up is `--better`, down is `--worse`, and a shop the plan did not
+          // touch stays its own amber. Saturating at ±20% is deliberate: a
+          // fifth of a day's takings either way is the difference between a
+          // good week and laying someone off, so it should reach full colour
+          // early rather than reserving it for swings nobody survives.
+          const k = Math.max(-1, Math.min((shopEffect.get(b.id) ?? 0) / 0.2, 1));
+          const fill =
+            k > 0.04
+              ? `color-mix(in oklab, var(--better) ${Math.round(k * 100)}%, var(--business))`
+              : k < -0.04
+                ? `color-mix(in oklab, var(--worse) ${Math.round(-k * 100)}%, var(--business))`
+                : 'var(--business)';
+          // Size carries the magnitude too, so a hit shop is findable at a
+          // zoom where its colour is three pixels wide.
+          const grow = 1 + Math.abs(k) * 0.9;
+          const half = (dragging ? shopPx * 1.3 : shopPx * grow) / 2;
+
           return (
             <g key={b.id} {...businessDrag.dragHandlers(b.id, b.pos)}>
               {/* An invisible disc gives a small storefront a grabbable target. */}
-              <circle cx={s.x} cy={s.y} r={Math.max(half + 4, 9)} fill="transparent" />
+              <circle cx={s2.x} cy={s2.y} r={Math.max(half + 4, 9)} fill="transparent" />
+              {/* A halo, so a badly hit shop is visible against the heat field
+                  without inflating the footprint it actually occupies. */}
+              {Math.abs(k) > 0.25 && (
+                <circle
+                  cx={s2.x}
+                  cy={s2.y}
+                  r={half * 3.2}
+                  fill={k > 0 ? 'var(--better)' : 'var(--worse)'}
+                  fillOpacity={0.16}
+                />
+              )}
               <rect
-                x={s.x - half}
-                y={s.y - half}
+                x={s2.x - half}
+                y={s2.y - half}
                 width={half * 2}
                 height={half * 2}
-                fill="var(--business)"
+                fill={fill}
                 stroke="var(--plan-ink)"
                 strokeWidth={0.75}
                 strokeOpacity={0.6}

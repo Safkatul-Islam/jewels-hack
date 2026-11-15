@@ -20,28 +20,13 @@
 import { memo } from 'react';
 import type { BBox, Basemap as BasemapSpec, WorldState } from '@/lib/sim/types';
 import { basemapFor } from '@/components/plan/basemapGeometry';
-import { type Transform, worldToScreen } from '@/lib/transform';
+import { type Transform, worldToScreen, worldTransformString } from '@/lib/transform';
 
 interface Props {
   world: WorldState;
   bbox: BBox;
   basemap: BasemapSpec;
   t: Transform;
-}
-
-/**
- * World metres → screen pixels as a single SVG transform, so geometry can be
- * emitted in world coordinates and handed to the browser untouched.
- *
- * worldToScreen is  x' = (x - minX)·s + tx,  y' = (maxY - y)·s + ty
- * which is exactly   translate(tx - s·minX, ty + s·maxY) · scale(s, -s).
- *
- * The negative y scale is what flips world-north to screen-up. It also flips
- * strokes, so anything stroked inside this group needs vector-effect
- * non-scaling-stroke — otherwise the hairlines scale with the zoom.
- */
-function worldTransform(t: Transform, bbox: BBox): string {
-  return `translate(${t.tx - t.scale * bbox.minX} ${t.ty + t.scale * bbox.maxY}) scale(${t.scale} ${-t.scale})`;
 }
 
 function BasemapImpl({ world, bbox, basemap, t }: Props) {
@@ -73,7 +58,7 @@ function BasemapImpl({ world, bbox, basemap, t }: Props) {
       {/* the paper. Warm, not blue-grey: this is a drafting surface. */}
       <rect x={topLeft.x} y={topLeft.y} width={w} height={h} fill="var(--paper)" />
 
-      <g transform={worldTransform(t, bbox)}>
+      <g transform={worldTransformString(t, bbox)}>
         <path
           d={fabric.massLight}
           fill="var(--fabric)"

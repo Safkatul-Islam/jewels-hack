@@ -20,6 +20,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Basemap } from '@/components/plan/Basemap';
 import { FlowLayer } from '@/components/plan/FlowLayer';
+import { HeatLayer } from '@/components/plan/HeatLayer';
+import { ResidentLayer } from '@/components/plan/ResidentLayer';
+import { basemapFor } from '@/components/plan/basemapGeometry';
 import { PieceLayer } from '@/components/plan/PieceLayer';
 import { RoadLayer } from '@/components/plan/RoadLayer';
 import { WorldLayer } from '@/components/plan/WorldLayer';
@@ -35,6 +38,7 @@ import {
   clampView,
   composeView,
   fitTransform,
+  frameOn,
   screenToWorld,
   snapToGrid,
   zoomAt,
@@ -48,12 +52,25 @@ interface Props {
 /** Pointer travel, in px, below which a press on empty canvas is a click. */
 const CLICK_SLOP = 4;
 
+/** Metres across on opening: the venue, its apron and the first ring road,
+ *  which is where a plan actually gets made.
+ *
+ *  Tuned against the two things that fight each other here. The stadium bowl
+ *  is 250 m across, so anything under ~700 m is just the venue filling the
+ *  frame with nowhere to put anything. Meanwhile a 2.6 m parking stall needs
+ *  roughly 2 px to read at all. 1,100 m lands at 0.82 px/m: the bowl takes a
+ *  quarter of the frame, the first ring and the spokes off it are visible, a
+ *  shuttle hub is 74 px with its bays drawn, and a park-and-ride is 225 px. */
+const FORECOURT_M = 1100;
+
 export function PlanCanvas({ onCommit }: Props) {
   const world = usePlanStore((s) => s.world);
   const network = usePlanStore((s) => s.network);
   const result = usePlanStore((s) => s.result);
   const playMinute = usePlanStore((s) => s.playMinute);
   const playing = usePlanStore((s) => s.playing);
+  const heatmap = usePlanStore((s) => s.heatmap);
+  const blockDelay = usePlanStore((s) => s.blockDelay);
   const addPiece = usePlanStore((s) => s.addPiece);
   const removePiece = usePlanStore((s) => s.removePiece);
   const rotatePiece = usePlanStore((s) => s.rotatePiece);
@@ -82,11 +99,21 @@ export function PlanCanvas({ onCommit }: Props) {
     return () => ro.disconnect();
   }, []);
 
-  // A scenario switch re-frames. Keeping the old zoom would land the user
-  // somewhere arbitrary in a world they have not seen yet.
+  // /plan opens on the venue forecourt, not on the whole district, and
+  // re-frames there on a scenario switch. See frameOn() for why: at district
+  // scale a parking stall is half a pixel, so the facilities can only be
+  // glyphs. FIT is one click away for the overview.
+  //
+  // Keyed on the viewport too, because the first render measures 0 x 0 and the
+  // frame cannot be computed until ResizeObserver has reported.
+  const framedFor = useRef<string | null>(null);
   useEffect(() => {
-    setView(IDENTITY_VIEW);
-  }, [scenarioId]);
+    if (!world || size.width === 0 || size.height === 0) return;
+    const key = `${scenarioId}:${Math.round(size.width)}x${Math.round(size.height)}`;
+    if (framedFor.current === key) return;
+    framedFor.current = key;
+    setView(frameOn(fitTransform(world.bbox, size.width, size.height), world.bbox, world.venue.pos, FORECOURT_M));
+  }, [scenarioId, world, size.width, size.height]);
 
   const commit = useCallback(() => onCommit?.(), [onCommit]);
 
@@ -236,7 +263,29 @@ export function PlanCanvas({ onCommit }: Props) {
           }}
         >
           <Basemap world={world} bbox={bbox} basemap={world.basemap} t={t} />
+          {/* Homes, over the general fabric and under the streets, so a hurt
+              block reads as part of the city rather than as an overlay on it. */}
+          <ResidentLayer
+            blockMass={basemapFor(world).blockMass}
+            delayByBlock={blockDelay}
+            bbox={bbox}
+            t={t}
+          />
           <RoadLayer network={network} roads={world.baseRoads} bbox={bbox} t={t} />
+          {/* The crowd field, over the streets it forms on and under everything
+              you can grab. This is the layer that changes when a piece moves
+              but no route does. */}
+          <HeatLayer
+            heatmap={
+              heatmap === 'none' || !result
+                ? null
+                : heatmap === 'congestion'
+                  ? result.heatmaps.congestion
+                  : result.heatmaps.pedestrian
+            }
+            bbox={bbox}
+            t={t}
+          />
           <WorldLayer world={world} t={t} onCommit={commit} />
           {/* flows sit above the blocks so a corridor is not tinted by the
               district it runs through, and below the pieces so a facility is

@@ -22,6 +22,7 @@
 // be memoised on (kind, capacity) and reused across every render of a drag.
 
 import type { PieceKind } from '@/lib/sim/types';
+import type { Blocker } from '@/components/plan/packing';
 import { PIECE_META } from '@/lib/pieces';
 
 /** Real-world dimensions, in metres. These are the numbers the drawing is to. */
@@ -34,8 +35,16 @@ const MARKET_STALL = 3;
 const BIKE_SPACE_W = 0.6;
 
 /** Area per unit of capacity, in m², including circulation. Used to size the
- *  footprint from the capacity rather than fixing it. */
-const AREA_PER_SPACE = 30;
+ *  footprint from the capacity rather than fixing it.
+ *
+ *  These have to MATCH what the packer actually achieves on clear ground, and
+ *  27 is measured, not assumed: a 274 m square laid out at 2.6 x 5.4 m stalls
+ *  double-loaded around 7.2 m aisles yields 2,783 stalls, i.e. 27.0 m² each.
+ *  Sizing the land at 30 left the lot with slack, and slack is fatal to the
+ *  whole mechanic — a vendor village shoved into the middle ate the spare
+ *  rather than the capacity, so the count never moved and neither did the
+ *  score. The land you ask for should be the land you need. */
+const AREA_PER_SPACE = 27;
 const AREA_PER_STALL = 25;
 const AREA_PER_BIKE = 1.6;
 
@@ -58,9 +67,14 @@ export interface FacilityDrawing {
   hatch: string;
   /** planting, drawn as discs — TestFit's trees, and they read at a glance */
   trees: { x: number; y: number; r: number }[];
-  /** what the repeated unit is, for the inspector readout */
+  /** How many units actually FIT once obstructions are taken out. This is the
+   *  number that becomes Piece.capacity, and therefore the number the engine
+   *  simulates — not the number that was asked for. */
   drawnUnits: number;
 }
+
+/** Always free. Used when a facility is drawn with nothing to avoid. */
+const NOTHING_BLOCKED: Blocker = () => false;
 
 function rect(x: number, y: number, w: number, h: number): string {
   return `M${x.toFixed(2)},${y.toFixed(2)}h${w.toFixed(2)}v${h.toFixed(2)}h${(-w).toFixed(2)}Z`;
@@ -113,15 +127,30 @@ export function footprintFor(kind: PieceKind, capacity: number): number {
   }
 }
 
-/** Rows of car stalls packed into a box, double-loaded around drive aisles. */
-function parkingRows(size: number): { ticks: string; ink: string; drawn: number } {
+/**
+ * Rows of car stalls, double-loaded around drive aisles, laid into whatever
+ * ground is actually free.
+ *
+ * Each bank is scanlined: walk the row a stall at a time, ask the blocker
+ * whether that stall's own footprint is clear, and collect contiguous runs.
+ * A run gets its kerb line and its closing divider; a blocked stretch simply
+ * gets nothing. Rows therefore break around a neighbouring facility, stop at
+ * a road and disappear entirely where the stadium is, without any of that
+ * being special-cased.
+ *
+ * `drawn` is the true count of placeable stalls, never the strided drawing
+ * count — it leaves this function to become the piece's capacity.
+ */
+function parkingRows(
+  size: number,
+  blocked: Blocker,
+): { ticks: string; ink: string; drawn: number } {
   const ticks: string[] = [];
   const ink: string[] = [];
   const half = size / 2;
   const moduleD = CAR_STALL_D * 2 + DRIVE_AISLE;
   const perRow = Math.max(1, Math.floor(size / CAR_STALL_W));
   const modules = Math.max(1, Math.floor(size / moduleD));
-  // Thin the drawing, not the plan, when a big lot would blow the tick budget.
   const stride = Math.max(1, Math.ceil((modules * 2 * perRow) / MAX_TICKS));
 
   let drawn = 0;
@@ -130,24 +159,40 @@ function parkingRows(size: number): { ticks: string; ink: string; drawn: number 
 
   for (let m = 0; m < modules; m++) {
     const y0 = top + m * moduleD;
-    // the two stall banks, facing each other across the aisle
-    for (const [bankTop, dir] of [
-      [y0, 1],
-      [y0 + CAR_STALL_D + DRIVE_AISLE, 1],
-    ] as const) {
-      ink.push(line(-half, bankTop + CAR_STALL_D * dir, half, bankTop + CAR_STALL_D * dir));
-      for (let i = 0; i <= perRow; i += stride) {
+    for (const bankTop of [y0, y0 + CAR_STALL_D + DRIVE_AISLE]) {
+      let runStart: number | null = null;
+      let lastX = -half;
+
+      const closeRun = (endX: number) => {
+        if (runStart === null) return;
+        ink.push(line(runStart, bankTop + CAR_STALL_D, endX, bankTop + CAR_STALL_D));
+        ticks.push(line(endX, bankTop, endX, bankTop + CAR_STALL_D));
+        runStart = null;
+      };
+
+      for (let i = 0; i < perRow; i++) {
         const x = -half + i * CAR_STALL_W;
-        if (x > half) break;
-        ticks.push(line(x, bankTop, x, bankTop + CAR_STALL_D));
-        drawn++;
+        const free = !blocked(x + CAR_STALL_W / 2, bankTop + CAR_STALL_D / 2);
+        if (free) {
+          if (runStart === null) runStart = x;
+          if (i % stride === 0) ticks.push(line(x, bankTop, x, bankTop + CAR_STALL_D));
+          drawn++;
+          lastX = x + CAR_STALL_W;
+        } else {
+          closeRun(lastX);
+        }
       }
+      closeRun(lastX);
     }
   }
   return { ticks: ticks.join(''), ink: ink.join(''), drawn };
 }
 
-export function buildFacility(kind: PieceKind, capacity: number): FacilityDrawing {
+export function buildFacility(
+  kind: PieceKind,
+  capacity: number,
+  blocked: Blocker = NOTHING_BLOCKED,
+): FacilityDrawing {
   const size = footprintFor(kind, capacity);
   const half = size / 2;
   const base: FacilityDrawing = {
@@ -163,13 +208,14 @@ export function buildFacility(kind: PieceKind, capacity: number): FacilityDrawin
 
   switch (kind) {
     case 'park_and_ride': {
-      const rows = parkingRows(size);
+      const rows = parkingRows(size, blocked);
       // Planting islands at the ends of the rows — the single cheapest thing
       // that makes a parking field look designed rather than paved.
       const trees: FacilityDrawing['trees'] = [];
       const treeStep = Math.max(size / 5, 24);
       for (let x = -half + treeStep / 2; x < half; x += treeStep) {
         for (let y = -half + treeStep / 2; y < half; y += treeStep) {
+          if (blocked(x, y)) continue;
           trees.push({ x, y, r: 3.4 });
         }
       }
@@ -199,9 +245,11 @@ export function buildFacility(kind: PieceKind, capacity: number): FacilityDrawin
       let n = 0;
       for (let r = 0; r < rows && n < stalls; r++) {
         for (let c = 0; c < cols && n < stalls; c++) {
-          ticks.push(
-            rect(x0 + c * pitch, y0 + r * (MARKET_STALL + aisle), MARKET_STALL, MARKET_STALL),
-          );
+          const sx = x0 + c * pitch;
+          const sy = y0 + r * (MARKET_STALL + aisle);
+          // A stall on blocked ground is not a stall you have.
+          if (blocked(sx + MARKET_STALL / 2, sy + MARKET_STALL / 2)) continue;
+          ticks.push(rect(sx, sy, MARKET_STALL, MARKET_STALL));
           n++;
         }
       }
@@ -256,6 +304,7 @@ export function buildFacility(kind: PieceKind, capacity: number): FacilityDrawin
         for (let i = 0; i < perRow && n < spaces; i += 2) {
           const x = -half + 3 + i * BIKE_SPACE_W * 2;
           if (x > half - 3) break;
+          if (blocked(x, y + 1)) continue;
           ticks.push(line(x, y, x, y + 2));
           n += 2;
         }
@@ -334,13 +383,19 @@ export function buildFacility(kind: PieceKind, capacity: number): FacilityDrawin
 // are built once per distinct facility and then only moved.
 const cache = new Map<string, FacilityDrawing>();
 
-export function facilityFor(kind: PieceKind, capacity: number): FacilityDrawing {
+export function facilityFor(
+  kind: PieceKind,
+  capacity: number,
+  /** identifies everything that could block this facility — see packing.ts */
+  maskKey = '',
+  blocked: Blocker = NOTHING_BLOCKED,
+): FacilityDrawing {
   // Quantise the capacity so a slider drag does not mint a drawing per pixel.
   const q = Math.round(capacity);
-  const key = `${kind}:${q}`;
+  const key = `${kind}:${q}:${maskKey}`;
   const hit = cache.get(key);
   if (hit) return hit;
-  const built = buildFacility(kind, q);
+  const built = buildFacility(kind, q, blocked);
   if (cache.size > 400) cache.clear();
   cache.set(key, built);
   return built;
