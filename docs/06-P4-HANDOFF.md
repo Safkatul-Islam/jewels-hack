@@ -22,6 +22,22 @@ enrollment, role selection and manual half-turn correction. See
 changes and any push still need separate approval. Physical-card recognition remains
 unverified by Codex; Claude is handling real-photo checks separately.
 
+Final core update: the owner approved local merge of Claude's `110e246` (merge
+`fd2ee48`), including the local-contrast detector and three real-photo PNG fixtures.
+The combined suite now passes 29 groups, including those real-photo regressions.
+Enrollment exposes `pointSymmetric`: check it for the king/queen; uncheck it for the
+ace of spades. The UI defaults conservatively to two-headed on a new role. Card input
+uses a 1280 px long-side cap to match the photo validation and a 5 Hz processing
+cadence; ArUco remains 10 Hz and runs only in its own input mode. The synthetic demo
+now uses separated 120 px-wide cards (the old 52 px demo was below the updated size
+limit). Keep physical cards at least 110 px across, separated and fully in frame.
+Live-camera recognition is still not verified. No push is authorized by this update.
+Final updated build/typecheck/lint pass. The production smoke check recognized all
+three 120 px sample faces at scores near 1.00, rendered the 3D models, and accepted a
+normal Confirm after movement/rotation. That run took 452 ms, still over the 200 ms
+target. Use live capture only after a quick actual-deck check; the labelled synthetic
+card demo remains the verified fallback. P3/P1 coordination notes below still apply.
+
 ## Run and demonstrate
 
 From the repository root:
