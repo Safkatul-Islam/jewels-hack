@@ -98,7 +98,7 @@ export function PlaybackBar() {
 
   if (!result || timeline.length < 2) {
     return (
-      <div className="flex h-[58px] shrink-0 items-center gap-2 rounded-xl border border-dashed px-3 text-xs text-muted-foreground">
+      <div className="flex h-[58px] shrink-0 items-center gap-2 rounded-[2px] border border-dashed border-[var(--night-hairline)] px-3 font-mono text-[10px] tracking-[0.14em] text-[var(--night-dim)] uppercase">
         Place a piece to run the plan — the egress timeline appears here.
       </div>
     );
@@ -162,7 +162,7 @@ export function PlaybackBar() {
   })();
 
   return (
-    <div className="flex h-[58px] shrink-0 items-center gap-3 rounded-xl border bg-background px-3">
+    <div className="flex h-[58px] shrink-0 items-center gap-3 rounded-[2px] border border-[var(--night-hairline)] bg-[var(--ink)] px-3">
       <button
         type="button"
         aria-label={playing ? 'Pause the run' : 'Play the run'}
@@ -175,7 +175,7 @@ export function PlaybackBar() {
           if (playMinute === null || atEnd) setPlayMinute(first);
           setPlaying(true);
         }}
-        className="grid size-8 shrink-0 place-items-center rounded-full bg-foreground text-background transition-opacity hover:opacity-85"
+        className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--bone)] text-[var(--ink)] transition-opacity hover:opacity-85"
       >
         {playing ? (
           <svg viewBox="0 0 10 10" className="size-3 fill-current">
@@ -198,7 +198,7 @@ export function PlaybackBar() {
           aria-valuemin={first}
           aria-valuemax={last}
           aria-valuenow={Math.round(shown)}
-          className="relative h-7 cursor-ew-resize overflow-hidden rounded-[3px] bg-muted/60"
+          className="relative h-7 cursor-ew-resize overflow-hidden rounded-[2px] bg-[color-mix(in_oklab,var(--night-hairline),transparent_55%)]"
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             scrubbing.current = true;
@@ -230,13 +230,13 @@ export function PlaybackBar() {
             ))}
           </svg>
           <div
-            className="pointer-events-none absolute inset-y-0 w-px bg-foreground"
+            className="pointer-events-none absolute inset-y-0 w-px bg-[var(--bone)]"
             style={{ left: `${headPct}%` }}
           />
         </div>
 
-        <div className="flex items-center gap-3 overflow-hidden font-mono text-[10px] text-muted-foreground tabular-nums">
-          <span className="shrink-0 font-medium text-foreground">
+        <div className="flex items-center gap-3 overflow-hidden font-mono text-[10px] tracking-[0.12em] text-[var(--night-dim)] uppercase tabular-nums">
+          <span className="shrink-0 font-medium text-[var(--bone)]">
             {Math.round(shown)} min
             {playMinute === null && <span className="ml-1 opacity-60">peak</span>}
           </span>

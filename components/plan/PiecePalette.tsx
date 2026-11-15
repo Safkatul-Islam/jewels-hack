@@ -19,7 +19,7 @@ export function PiecePalette() {
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="px-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+      <div className="font-mono text-[10px] tracking-[0.18em] text-[var(--night-accent)] uppercase">
         Pieces
       </div>
       <div className="grid grid-cols-1 gap-1.5">
@@ -39,19 +39,24 @@ export function PiecePalette() {
               }}
               onClick={() => armKind(armed ? null : kind)}
               className={cn(
-                'group flex items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors',
-                'hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50',
-                armed ? 'border-foreground bg-accent' : 'border-border',
+                'group flex items-center gap-2.5 rounded-[2px] border px-2.5 py-2 text-left transition-colors',
+                'hover:border-[var(--night-dim)] disabled:cursor-not-allowed disabled:opacity-40',
+                armed
+                  ? 'border-[var(--night-accent)] bg-[color-mix(in_oklab,var(--night-accent),transparent_92%)]'
+                  : 'border-[var(--night-hairline)]',
               )}
             >
+              {/* The piece's own colour is the one thing here the accent must
+                  never touch: it is how a kind is identified, on this palette
+                  and on the canvas. */}
               <span
                 aria-hidden
-                className="size-3.5 shrink-0 rounded-[3px]"
+                className="size-2.5 shrink-0 rounded-[1px]"
                 style={{ background: meta.color }}
               />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-medium">{meta.label}</span>
-                <span className="block truncate text-[10px] text-muted-foreground tabular-nums">
+                <span className="block truncate text-[0.8125rem] leading-tight">{meta.label}</span>
+                <span className="block truncate font-mono text-[9px] tracking-[0.08em] text-[var(--night-dim)] tabular-nums">
                   {meta.defaultCapacity > 0 ? `${meta.defaultCapacity.toLocaleString()} ${meta.unit}` : meta.unit}
                 </span>
               </span>
@@ -59,10 +64,11 @@ export function PiecePalette() {
           );
         })}
       </div>
-      <p className="px-1 pt-1 text-[10px] leading-snug text-muted-foreground">
-        Drag onto the map, or click a piece then click the map. Selected piece:{' '}
-        <kbd className="rounded border px-1">[</kbd> <kbd className="rounded border px-1">]</kbd> to
-        rotate, <kbd className="rounded border px-1">Del</kbd> to remove.
+      <p className="pt-1 font-mono text-[9px] leading-relaxed tracking-[0.06em] text-[var(--night-dim)]">
+        Drag onto the map, or click a piece then the map. Selected:{' '}
+        <kbd className="rounded-[1px] border border-[var(--night-hairline)] px-1">[</kbd>{' '}
+        <kbd className="rounded-[1px] border border-[var(--night-hairline)] px-1">]</kbd> rotate,{' '}
+        <kbd className="rounded-[1px] border border-[var(--night-hairline)] px-1">Del</kbd> remove.
       </p>
     </div>
   );
