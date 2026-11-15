@@ -6,6 +6,7 @@ export interface CardEnrollment {
   markerId: number;
   label: string;
   flipped: boolean;
+  pointSymmetric: boolean;
 }
 
 function turned(corners: CardCorners): CardCorners {
@@ -25,12 +26,12 @@ export class CardInput {
 
   constructor(private cv: CvApi) {}
 
-  enroll(frame: Frame, markerId: number, label: string): void {
+  enroll(frame: Frame, markerId: number, label: string, pointSymmetric = false): void {
     if (!Number.isInteger(markerId) || !Object.hasOwn(MARKER_MAP, markerId)) {
       throw new Error('Choose a known planning role before enrolling a card.');
     }
     // Enrollment errors leave the previous reference intact.
-    const reference = enrollCard(this.cv, frame, String(markerId));
+    const reference = enrollCard(this.cv, frame, String(markerId), { pointSymmetric });
     this.references.set(markerId, reference);
     this.labels.set(markerId, label.trim() || `Card ${markerId}`);
     this.headings.delete(markerId);
@@ -40,6 +41,7 @@ export class CardInput {
   list(): CardEnrollment[] {
     return [...this.references.keys()].sort((a, b) => a - b).map(markerId => ({
       markerId, label: this.labels.get(markerId)!, flipped: this.flipped.has(markerId),
+      pointSymmetric: this.references.get(markerId)!.pointSymmetric === true,
     }));
   }
 
