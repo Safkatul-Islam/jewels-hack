@@ -6,6 +6,14 @@ also approved a local merge of `origin/main` at `45352bc` (engine, `/plan` wirin
 advisor, landing page) as `8fb1496`. With owner approval the branch was pushed to `origin/p4-vision-table` through `5faae26`; later commits are local until a new approval. The implementation
 uses the root Next.js app and React Three Fiber; the standalone Vite lab is retired.
 
+Current owner-approved priority: finish software acceptance, then replace printed input
+with enrolled regular playing cards. Codex owns existing P4 software in this checkout
+on `p4-vision-table`. Claude owns new `lib/vision/cards/**` files/tests and
+`docs/08-PLAYING-CARDS.md` in the separate sibling `jewel-city-hacks-cards` worktree,
+branch `p4-playing-cards`, starting at `a8af439`. Neither agent edits the other's files.
+Card integration, merges and pushes still require the agreed review/approval steps.
+The ArUco path and printable pack remain available as existing fallback/test inputs.
+
 ## Run and demonstrate
 
 From the repository root:
@@ -103,8 +111,9 @@ session resets, RAF cleanup, media tracks, image bitmaps and object URLs.
 
 `TableSession<WorldState>` owns draft/confirmed separation. `markersToWorld` performs
 immutable upserts, adopts an existing unmarked piece of the same kind, and preserves
-stable IDs, capacities and locked pieces. The route uses `setWorld` and `setResult(null)`
-only on explicit Confirm. P1's map layers and coordinate transform render the draft.
+stable IDs, capacities and locked pieces. Explicit Confirm calls `setWorld`, then
+builds/simulates once and stores the network/result; a failed run clears stale outputs.
+P1's map layers and coordinate transform render the draft.
 
 `components/three/MarkerScene.tsx` is a client-only, dynamically imported R3F Canvas.
 `PieceModel.tsx` provides original primitive models for all nine kinds: stadium bowl,
@@ -141,12 +150,29 @@ the convention dependency or the run time. See `fixtures/SCENARIOS.md`.
 
 ## Verification and physical acceptance
 
-Thirteen automated test groups pass: real dictionary IDs/rotations, blank frames, overhead
+Fourteen automated test groups pass: real dictionary IDs/rotations, blank frames, overhead
 orientation/origin/scenario distances, perspective interior points and degenerate
 calibration, immutable/locked pieces, jitter/occlusion, Confirm gating, fixture
 connectivity, camera replacement/late-stream cleanup, overlay coordinates, frame-rate
-independent shortest-path rotation, and context-loss listener cleanup. Typecheck, lint and the
+independent shortest-path rotation, context-loss listener cleanup, and stationary-marker
+confidence degradation/recovery. Typecheck, lint and the
 Next.js production build pass.
+
+Codex acceptance after `a8af439` (2026-11-14): the merged production build, typecheck,
+lint and original 13 tests passed. A normal foreground Chrome click on Confirm ran
+the real engine; navigation to `/plan` retained that run (302 ms) without rerunning.
+The Rose Bowl baseline score was 57.9; after moving/rotating generated pieces and
+Confirm, it was 56.3. Baseline runtime was 216 ms. These individual observations exceed
+the 200 ms target and are not a hardware performance guarantee; engine tuning remains
+P3's responsibility. Four-corner calibration completed, and scenario switching cleared
+calibration and disabled Confirm. Route departure/return cleared capture. Browser Back
+once restored older cached wording; a reload showed the current production response.
+
+This pass found and fixed stale tracking confidence: a marker below the movement
+threshold retained an earlier high confidence, allowing an uncertain stationary
+reading to pass Confirm. Geometry remains smoothed, while confidence now follows the
+current reading immediately. The regression failed before the fix and passes after
+it, including immediate recovery without movement. The suite now has 14 passing groups.
 
 After the `main` merge (2026-11-14): typecheck, lint and the 13 vision test groups pass
 with the engine wiring; the production build passed on the merged tree before the wiring
