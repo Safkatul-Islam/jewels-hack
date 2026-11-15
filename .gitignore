@@ -43,5 +43,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# MediaPipe runtime for the gesture mode — ~30 MB of wasm plus a 7.5 MB model,
+# fetched into public/ by `npm run vision:assets` (which `npm run dev` runs for
+# you). Vendored locally so the demo never depends on conference wifi, ignored
+# here because binaries that large do not belong in a shared repo.
+/public/vision/
+
 # Retired P4 preview artifacts retained locally after Next.js integration
 /tools/p4/

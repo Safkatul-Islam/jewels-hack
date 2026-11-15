@@ -12,12 +12,20 @@
 //     That is what keeps the drag at 60 fps (AGENTS.md §2.7).
 //   - Positions snap to the store's grid and clamp to the scenario bbox, so a
 //     piece can never be dropped off-world where the engine cannot route to it.
+//
+// A selected piece gets the vocabulary a planning tool is supposed to have:
+// corner handles, a rotation handle, and its live dimensions in metres. The
+// dimensions are not decoration — the footprint is derived from the capacity
+// (facilityGeometry.ts), so they are the land this plan is actually taking.
 
 import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { PIECE_META } from '@/lib/pieces';
 import { usePlanStore } from '@/lib/store';
+import { blockerKey, makeBlocker } from '@/components/plan/packing';
 import type { BBox, Piece } from '@/lib/sim/types';
+import { FacilityShape } from '@/components/plan/FacilityShape';
+import { footprintFor } from '@/components/plan/facilityGeometry';
 import {
   type Transform,
   clampToBBox,
@@ -35,19 +43,27 @@ interface Props {
   onCommit: () => void;
 }
 
+/** Rotation snaps to 15° while dragging the handle, unless Alt is held. */
+const ROTATE_STEP = Math.PI / 12;
+
 export function PieceLayer({ pieces, bbox, t, onCommit }: Props) {
   const movePiece = usePlanStore((s) => s.movePiece);
+  const rotatePiece = usePlanStore((s) => s.rotatePiece);
   const selectPiece = usePlanStore((s) => s.selectPiece);
   const setDragging = usePlanStore((s) => s.setDragging);
   const selectedId = usePlanStore((s) => s.selectedPieceId);
   const draggingId = usePlanStore((s) => s.draggingPieceId);
   const snapM = usePlanStore((s) => s.snapM);
+  const world = usePlanStore((s) => s.world);
+  const requested = usePlanStore((s) => s.requested);
 
   /** world-space offset from the pointer to the piece centre, so it doesn't jump */
   const grab = useRef<{ dx: number; dy: number } | null>(null);
   const moved = useRef(false);
+  /** set while the rotation handle has the pointer, so the body drag stays out of it */
+  const rotating = useRef<string | null>(null);
 
-  function svgPoint(e: React.PointerEvent<SVGGElement>) {
+  function svgPoint(e: React.PointerEvent<SVGElement>) {
     const svg = e.currentTarget.ownerSVGElement;
     if (!svg) return null;
     const rect = svg.getBoundingClientRect();
@@ -62,8 +78,14 @@ export function PieceLayer({ pieces, bbox, t, onCommit }: Props) {
           x: (piece.pos.x - bbox.minX) * t.scale + t.tx,
           y: (bbox.maxY - piece.pos.y) * t.scale + t.ty,
         };
-        const size = Math.max(metresToPx(t, meta.footprintM), 16);
-        const half = size / 2;
+        // The footprint is the land the plan TOOK, which is what was asked
+        // for — not the smaller number that fitted once the site pushed back.
+        const asked = requested[piece.id] ?? piece.capacity;
+        const sizeM = footprintFor(piece.kind, asked);
+        const blocked = world ? makeBlocker(world, { ...piece, capacity: asked }) : undefined;
+        const maskKey = world ? blockerKey(world, { ...piece, capacity: asked }) : '';
+        const sizePx = Math.max(metresToPx(t, sizeM), 12);
+        const half = sizePx / 2;
         const isSelected = selectedId === piece.id;
         const isDragging = draggingId === piece.id;
         const fromMarker = piece.fromMarker !== undefined;
@@ -79,7 +101,7 @@ export function PieceLayer({ pieces, bbox, t, onCommit }: Props) {
             style={{ cursor: piece.locked ? 'default' : isDragging ? 'grabbing' : 'grab' }}
             transform={`translate(${centre.x} ${centre.y}) rotate(${rotationToDeg(piece.rotation)})`}
             onPointerDown={(e) => {
-              if (piece.locked) return;
+              if (piece.locked || rotating.current) return;
               e.stopPropagation();
               const p = svgPoint(e);
               if (!p) return;
@@ -124,36 +146,67 @@ export function PieceLayer({ pieces, bbox, t, onCommit }: Props) {
               transition={{ type: 'spring', stiffness: 520, damping: 30 }}
               style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
             >
-              <rect
-                x={-half}
-                y={-half}
-                width={size}
-                height={size}
-                rx={Math.min(6, size / 4)}
-                fill={meta.color}
-                fillOpacity={isDragging ? 0.95 : 0.8}
-                stroke={isSelected ? 'var(--foreground)' : 'var(--canvas-bg)'}
-                strokeWidth={isSelected ? 2 : 1.25}
-                strokeDasharray={fromMarker ? '4 2' : undefined}
+              {/* A transparent pad keeps a small facility grabbable, and keeps
+                  the grab target the same size as the thing you can see. */}
+              <rect x={-half} y={-half} width={sizePx} height={sizePx} fill="transparent" />
+
+              <FacilityShape
+                kind={piece.kind}
+                capacity={asked}
+                maskKey={maskKey}
+                blocked={blocked}
+                scale={t.scale}
+                color={meta.color}
+                dragging={isDragging}
               />
-              {/* capacity is the thing you tune after placing, so it is always legible */}
-              {size >= 30 && (
-                <text
-                  y={3.5}
-                  textAnchor="middle"
-                  className="pointer-events-none fill-white text-[9px] font-semibold tabular-nums"
-                >
-                  {piece.capacity > 0 ? compact(piece.capacity) : '×'}
-                </text>
+
+              {fromMarker && (
+                <rect
+                  x={-half}
+                  y={-half}
+                  width={sizePx}
+                  height={sizePx}
+                  fill="none"
+                  stroke={meta.color}
+                  strokeWidth={1}
+                  strokeDasharray="4 2"
+                />
               )}
+
               {isSelected && (
-                <text
-                  y={-half - 6}
-                  textAnchor="middle"
-                  className="pointer-events-none fill-foreground text-[10px] font-medium"
-                >
-                  {meta.label}
-                </text>
+                <SelectionFrame
+                  half={half}
+                  label={meta.label}
+                  sizeM={sizeM}
+                  capacity={piece.capacity}
+                  requested={asked}
+                  unit={meta.unit}
+                  onRotateStart={(e) => {
+                    e.stopPropagation();
+                    rotating.current = piece.id;
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                  }}
+                  onRotateMove={(e) => {
+                    if (rotating.current !== piece.id) return;
+                    const p = svgPoint(e);
+                    if (!p) return;
+                    // 0 = north, positive clockwise — the same convention the
+                    // contract uses for Piece.rotation.
+                    const raw = Math.atan2(p.x - centre.x, -(p.y - centre.y));
+                    const next = e.altKey ? raw : Math.round(raw / ROTATE_STEP) * ROTATE_STEP;
+                    if (next !== piece.rotation) {
+                      moved.current = true;
+                      rotatePiece(piece.id, next);
+                    }
+                  }}
+                  onRotateEnd={(e) => {
+                    if (rotating.current !== piece.id) return;
+                    e.currentTarget.releasePointerCapture(e.pointerId);
+                    rotating.current = null;
+                    if (moved.current) onCommit();
+                    moved.current = false;
+                  }}
+                />
               )}
             </motion.g>
           </g>
@@ -163,6 +216,134 @@ export function PieceLayer({ pieces, bbox, t, onCommit }: Props) {
   );
 }
 
-function compact(n: number): string {
-  return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n);
+/**
+ * The CAD furniture: corner handles, a rotation handle, a dimension line and
+ * the live readout. All of it in screen pixels — handles that scale with the
+ * zoom stop being handles.
+ */
+function SelectionFrame({
+  half,
+  label,
+  sizeM,
+  capacity,
+  requested,
+  unit,
+  onRotateStart,
+  onRotateMove,
+  onRotateEnd,
+}: {
+  half: number;
+  label: string;
+  sizeM: number;
+  capacity: number;
+  requested: number;
+  unit: string;
+  onRotateStart: (e: React.PointerEvent<SVGCircleElement>) => void;
+  onRotateMove: (e: React.PointerEvent<SVGCircleElement>) => void;
+  onRotateEnd: (e: React.PointerEvent<SVGCircleElement>) => void;
+}) {
+  const h = 3.5;
+  const corners: [number, number][] = [
+    [-half, -half],
+    [half, -half],
+    [half, half],
+    [-half, half],
+  ];
+  const dim = `${Math.round(sizeM)} m`;
+
+  return (
+    <g className="pointer-events-none">
+      <rect
+        x={-half}
+        y={-half}
+        width={half * 2}
+        height={half * 2}
+        fill="none"
+        stroke="var(--plan-ink)"
+        strokeWidth={1.25}
+      />
+
+      {/* dimension line along the top edge, with end ticks */}
+      <g stroke="var(--plan-ink)" strokeWidth={1} strokeOpacity={0.75}>
+        <line x1={-half} y1={-half - 9} x2={half} y2={-half - 9} />
+        <line x1={-half} y1={-half - 13} x2={-half} y2={-half - 5} />
+        <line x1={half} y1={-half - 13} x2={half} y2={-half - 5} />
+      </g>
+      <text
+        y={-half - 13}
+        textAnchor="middle"
+        className="fill-foreground text-[9px] font-medium tabular-nums"
+      >
+        {dim}
+      </text>
+
+      {corners.map(([x, y]) => (
+        <rect
+          key={`${x},${y}`}
+          x={x - h}
+          y={y - h}
+          width={h * 2}
+          height={h * 2}
+          fill="var(--paper)"
+          stroke="var(--plan-ink)"
+          strokeWidth={1.25}
+        />
+      ))}
+
+      {/* rotation handle, on a stem above the frame */}
+      <line
+        x1={0}
+        y1={-half}
+        x2={0}
+        y2={-half - 24}
+        stroke="var(--plan-ink)"
+        strokeWidth={1}
+        strokeOpacity={0.6}
+      />
+      <circle
+        cx={0}
+        cy={-half - 24}
+        r={5}
+        fill="var(--paper)"
+        stroke="var(--plan-ink)"
+        strokeWidth={1.5}
+        className="pointer-events-auto"
+        style={{ cursor: 'grab' }}
+        onPointerDown={onRotateStart}
+        onPointerMove={onRotateMove}
+        onPointerUp={onRotateEnd}
+        onPointerCancel={onRotateEnd}
+      />
+
+      <text
+        y={half + 14}
+        textAnchor="middle"
+        className="fill-foreground text-[10px] font-medium"
+      >
+        {label}
+      </text>
+      {capacity > 0 && (
+        <text
+          y={half + 25}
+          textAnchor="middle"
+          className="fill-muted-foreground text-[9px] tabular-nums"
+        >
+          {capacity.toLocaleString('en-US')} {unit}
+        </text>
+      )}
+      {/* The whole point of packing the site: when the ground could not take
+          what was asked for, say so on the piece rather than silently
+          simulating a number nobody can see. */}
+      {requested > capacity + 0.5 && (
+        <text
+          y={half + 35}
+          textAnchor="middle"
+          className="fill-[var(--worse)] text-[9px] tabular-nums"
+        >
+          {Math.round(requested).toLocaleString('en-US')} asked ·{' '}
+          {Math.round(100 - (capacity / requested) * 100)}% lost
+        </text>
+      )}
+    </g>
+  );
 }

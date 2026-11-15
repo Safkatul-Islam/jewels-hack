@@ -55,9 +55,41 @@ export interface PlanStore {
    */
   network: RoadNetwork | null;
   result: SimResult | null;
+  /**
+   * Minutes added to each block's drive out, versus the same world with no
+   * pieces. Derived in the page rather than returned by the engine: SimResult
+   * reports `residentsBlockedPct` as one number for the whole world, and the
+   * canvas needs to say WHICH streets, not how many.
+   */
+  blockDelay: Record<string, number>;
+  /**
+   * What was ASKED for, per piece, before the site had its say.
+   *
+   * Piece.capacity now carries what actually FITS once the stalls are packed
+   * around the venue, the roads and the neighbours (packing.ts), and that is
+   * the number simulate() reads. The requested figure has to survive
+   * separately or the inspector slider becomes a ratchet: pack it down to
+   * 1,840, and 1,840 is all you could ever ask for again. It also fixes the
+   * FOOTPRINT — the land you took is what you asked for, not what fitted, and
+   * deriving the footprint from the fitted count instead would make the
+   * packing oscillate.
+   *
+   * Store-only. Nothing in docs/02-CONTRACTS.md changes.
+   */
+  requested: Record<string, number>;
   baseline: SimResult | null;
   compare: boolean;
   heatmap: HeatmapLayer;
+
+  // ---- playback ----
+  //
+  // Where on the egress timeline the canvas is showing. `null` means "the whole
+  // run at once" — the aggregate view, which is what you want while editing.
+  // A number scrubs SimResult.timeline, which is the only per-minute data the
+  // contract returns; everything animated on the canvas is a rendering of those
+  // counts, not a second simulation.
+  playMinute: number | null;
+  playing: boolean;
 
   // ---- scenario ----
   loadScenarioById: (id: string) => Promise<void>;
@@ -99,9 +131,14 @@ export interface PlanStore {
   setWeights: (w: Partial<Weights>) => void;
   setNetwork: (n: RoadNetwork | null) => void;
   setResult: (r: SimResult | null) => void;
+  setBlockDelay: (d: Record<string, number>) => void;
+  /** The packed result. Sets Piece.capacity without touching the request. */
+  setFittedCapacity: (id: string, capacity: number) => void;
   setBaseline: (r: SimResult | null) => void;
   setCompare: (on: boolean) => void;
   setHeatmap: (layer: HeatmapLayer) => void;
+  setPlayMinute: (m: number | null) => void;
+  setPlaying: (on: boolean) => void;
 }
 
 export const usePlanStore = create<PlanStore>((set) => ({
@@ -118,9 +155,13 @@ export const usePlanStore = create<PlanStore>((set) => ({
   weights: { games: 1, livability: 1, economy: 1 },
   network: null,
   result: null,
+  blockDelay: {},
+  requested: {},
   baseline: null,
   compare: false,
-  heatmap: 'none',
+  heatmap: 'pedestrian',
+  playMinute: null,
+  playing: true,
 
   loadScenarioById: async (id) => {
     set({ loading: true, error: null });
@@ -135,8 +176,12 @@ export const usePlanStore = create<PlanStore>((set) => ({
         error: null,
         network: null,
         result: null,
+        blockDelay: {},
+        requested: {},
         baseline: null,
         compare: false,
+        playMinute: null,
+        playing: true,
         selectedPieceId: null,
         draggingPieceId: null,
         armedKind: null,
@@ -161,7 +206,13 @@ export const usePlanStore = create<PlanStore>((set) => ({
       capacity: PIECE_META[kind].defaultCapacity,
     };
     set((s) =>
-      s.world ? { world: { ...s.world, pieces: [...s.world.pieces, piece] }, selectedPieceId: id } : s,
+      s.world
+        ? {
+            world: { ...s.world, pieces: [...s.world.pieces, piece] },
+            selectedPieceId: id,
+            requested: { ...s.requested, [id]: piece.capacity },
+          }
+        : s,
     );
     return id;
   },
@@ -190,10 +241,14 @@ export const usePlanStore = create<PlanStore>((set) => ({
         : s,
     ),
 
+  // The inspector's slider. It sets the REQUEST, and provisionally the
+  // capacity too, so the piece resizes while you drag; runPlan then packs the
+  // site and replaces the capacity with what fitted.
   setPieceCapacity: (id, capacity) =>
     set((s) =>
       s.world
         ? {
+            requested: { ...s.requested, [id]: capacity },
             world: {
               ...s.world,
               pieces: s.world.pieces.map((p) => (p.id === id ? { ...p, capacity } : p)),
@@ -256,10 +311,28 @@ export const usePlanStore = create<PlanStore>((set) => ({
   setWeights: (w) => set((s) => ({ weights: { ...s.weights, ...w } })),
 
   setNetwork: (network) => set({ network }),
-  setResult: (result) => set({ result }),
+  // A fresh result replaces the timeline the playhead was indexing, so playback
+  // rewinds rather than pointing into a run that no longer exists — but it
+  // keeps running. The egress loop is the page's resting state, not something
+  // the user has to start.
+  setResult: (result) => set({ result, playMinute: null, playing: true }),
+  setBlockDelay: (blockDelay) => set({ blockDelay }),
+  setFittedCapacity: (id, capacity) =>
+    set((s) =>
+      s.world
+        ? {
+            world: {
+              ...s.world,
+              pieces: s.world.pieces.map((p) => (p.id === id ? { ...p, capacity } : p)),
+            },
+          }
+        : s,
+    ),
   setBaseline: (baseline) => set({ baseline }),
   setCompare: (compare) => set({ compare }),
   setHeatmap: (heatmap) => set({ heatmap }),
+  setPlayMinute: (playMinute) => set({ playMinute }),
+  setPlaying: (playing) => set({ playing }),
 }));
 
 // ---- selectors: import these rather than reaching into the store shape ----
@@ -271,6 +344,13 @@ export const selectSelectedPiece = (s: PlanStore) =>
 
 /** Has a plan been placed at all? Drives the empty state on the dashboard. */
 export const selectHasPieces = (s: PlanStore) => (s.world?.pieces.length ?? 0) > 0;
+
+/** What a piece was asked to be, falling back to what it is. Pieces that
+ *  arrive from outside the palette — P4's ArUco markers, a preset, setPieces —
+ *  have no recorded request, and their own capacity is the best answer. */
+export function requestedCapacity(s: PlanStore, piece: Piece): number {
+  return s.requested[piece.id] ?? piece.capacity;
+}
 
 /** `get()` escape hatch for non-React callers — P4's vision loop, mainly. */
 export const planStore = usePlanStore;

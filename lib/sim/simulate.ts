@@ -14,7 +14,13 @@
 //    residentsBlockedPct), so they're sampled as point-in-time trips, not rasterised.
 
 import type { Heatmap, Metrics, RoadNetwork, Score, SimResult, Vec2, Weights, WorldState } from './types';
-import { buildNetwork, routeEdgeIds, shortestPathsFrom, type ShortestPaths } from './network';
+import {
+  buildNetwork,
+  routeEdgeIds,
+  shortestPathsFrom,
+  type ShortestPaths,
+  type TravelMode,
+} from './network';
 import { pointAtDistance, polylineLength } from './geometry';
 import { addSpreadToHeatmap, createHeatmap, stampSegmentMax } from './heatmap';
 import { mean, percentile, clamp } from './stats';
@@ -268,6 +274,30 @@ function simulateResidents(
   const populationWeights = world.blocks.map((b) => b.population);
   const primaryAnchor = world.anchors[0];
 
+  // ---- P1, performance only: memoise the shortest-path trees ----
+  //
+  // Both loops below call shortestPathsFrom() per sampled trip and per block
+  // access node, on two networks. Every one of those is a full Dijkstra, but
+  // the ORIGINS come from block.accessNodeIds, of which there are only a
+  // couple of hundred at most — so the same tree was being rebuilt thousands
+  // of times. On a 30-node lattice that cost 130 ms and nobody noticed; on a
+  // 150-node organic network it was 1.2 seconds, five times the frame budget
+  // in docs/01-ARCHITECTURE.md, on every single drop.
+  //
+  // This changes no result: same function, same arguments, cached. Likewise
+  // the node lookup, which was a linear scan of net.nodes inside the loop.
+  const pathCache = new Map<string, ShortestPaths>();
+  const pathsFrom = (n: RoadNetwork, sourceId: string, mode: TravelMode): ShortestPaths => {
+    const key = `${n === baseNet ? 'b' : 'c'}|${mode}|${sourceId}`;
+    let paths = pathCache.get(key);
+    if (!paths) {
+      paths = shortestPathsFrom(n, sourceId, mode);
+      pathCache.set(key, paths);
+    }
+    return paths;
+  };
+  const netNodeIds = new Set(net.nodes.map((n) => n.id));
+
   const delays: number[] = [];
   const edgeLoad = new Map<string, number>(); // edgeId -> scaled trips/window using it
   const scalePerTrip = sampleCount > 0 ? world.params.residentTrips / sampleCount : 0;
@@ -277,11 +307,11 @@ function simulateResidents(
     if (block.accessNodeIds.length === 0) continue;
     const originNodeId = rng.pick(block.accessNodeIds);
     const destNodeId = primaryAnchor ? net.anchorNodeIds[primaryAnchor.id] : undefined;
-    if (!destNodeId || !net.nodes.some((n) => n.id === originNodeId)) continue;
+    if (!destNodeId || !netNodeIds.has(originNodeId)) continue;
 
     const mode = rng.next() < 0.7 ? 'drive' : 'walk';
-    const cur = shortestPathsFrom(net, originNodeId, mode);
-    const base = shortestPathsFrom(baseNet, originNodeId, mode);
+    const cur = pathsFrom(net, originNodeId, mode);
+    const base = pathsFrom(baseNet, originNodeId, mode);
     const curMin = cur.minutes[destNodeId];
     const baseMin = base.minutes[destNodeId];
 
@@ -318,9 +348,9 @@ function simulateResidents(
     let bestCur = Infinity;
     let bestBase = Infinity;
     for (const nodeId of block.accessNodeIds) {
-      if (!net.nodes.some((n) => n.id === nodeId)) continue;
-      const curMin = shortestPathsFrom(net, nodeId, 'drive').minutes[destNodeId] ?? Infinity;
-      const baseMin = shortestPathsFrom(baseNet, nodeId, 'drive').minutes[destNodeId] ?? Infinity;
+      if (!netNodeIds.has(nodeId)) continue;
+      const curMin = pathsFrom(net, nodeId, 'drive').minutes[destNodeId] ?? Infinity;
+      const baseMin = pathsFrom(baseNet, nodeId, 'drive').minutes[destNodeId] ?? Infinity;
       bestCur = Math.min(bestCur, curMin);
       bestBase = Math.min(bestBase, baseMin);
     }
