@@ -25,6 +25,13 @@ export interface CardQuad {
 export interface EnrolledCard {
   id: string;
   feature: Float32Array;
+  /**
+   * Declares that the face is printed point-symmetric (two-headed court cards,
+   * most pip cards). Its readings then always report `headingAmbiguous: true`:
+   * print misregistration and lighting can make one orientation score slightly
+   * higher, but that preference is not evidence of which end is which.
+   */
+  pointSymmetric?: boolean;
 }
 
 export type CardRejection =
@@ -45,7 +52,8 @@ export interface CardReading {
   runnerUpScore: number;
   /**
    * True when the upright and 180-degree-turned comparisons are too close to tell
-   * apart (most pip cards are point-symmetric), or when the reading was rejected.
+   * apart, when the enrolled card is declared `pointSymmetric`, or when the
+   * reading was rejected.
    * The heading is then only known modulo 180 degrees.
    */
   headingAmbiguous: boolean;
@@ -64,8 +72,8 @@ export type CvContour = Vec2[] & { hole?: boolean };
 
 export interface CvApi {
   grayscale(source: Frame, destination: CvImage): CvImage;
-  otsu(source: CvImage): number;
-  threshold(source: CvImage, destination: CvImage, threshold: number): CvImage;
+  /** Marks pixels darker than their box-blurred neighbourhood by at least `threshold`. */
+  adaptiveThreshold(source: CvImage, destination: CvImage, kernelSize: number, threshold: number): CvImage;
   findContours(source: CvImage, binaryScratch: Int32Array): CvContour[];
   approxPolyDP(contour: Vec2[], epsilon: number): Vec2[];
   isContourConvex(contour: Vec2[]): boolean;

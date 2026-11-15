@@ -139,6 +139,15 @@ export function similarity(a: Float32Array, b: Float32Array): number {
   return dot;
 }
 
+/**
+ * How alike a card looks when turned by 180 degrees, -1..1. Near 1 means the
+ * heading cannot be recovered from appearance. Informational: use it to suggest
+ * `pointSymmetric` at enrollment, not as a calibrated test.
+ */
+export function halfTurnSimilarity(feature: Float32Array): number {
+  return similarity(feature, rotateFeature180(feature));
+}
+
 export function assertFeature(feature: Float32Array): void {
   if (feature.length !== FEATURE_LENGTH) {
     throw new Error(`Card appearance must have ${FEATURE_LENGTH} values; got ${feature.length}. Re-enroll the card.`);
