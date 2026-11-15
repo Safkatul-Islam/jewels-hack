@@ -13,3 +13,7 @@ declare module 'js-aruco2' {
     Dictionary: new (name: string) => { generateSVG(id: number): string };
   };
 }
+
+declare module 'js-aruco2/src/cv.js' {
+  export const CV: import('./cards/types').CvApi;
+}
