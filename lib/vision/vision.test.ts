@@ -187,6 +187,21 @@ test('Confirm snapshots the draft and refuses stale/missing calibration and out-
   assert.equal(session.process([...anchors,marker(10,9999,300)],700).canConfirm,false);
   session.reset(world());assert.throws(()=>session.confirm());
 });
+
+test('a stationary uncertain marker disables Confirm and recovers without moving', () => {
+  const session = new TableSession(world());
+  const anchors = [marker(0, 200, 400), marker(1, 200, 200)];
+  const movable = marker(10, 300, 300);
+  assert.equal(session.process([...anchors, movable], 0).canConfirm, true);
+  // A correctable but weak dictionary match must not inherit an earlier frame's confidence.
+  const uncertain = { ...movable, hammingDistance: 4 };
+  const degraded = session.process([...anchors, uncertain], 100);
+  close(degraded.readings.find(reading => reading.markerId === 10)!.confidence, 1 / 3);
+  assert.equal(degraded.canConfirm, false);
+  assert.throws(() => session.confirm());
+  assert.equal(session.process([...anchors, uncertain], 200).canConfirm, false);
+  assert.equal(session.process([...anchors, movable], 300).canConfirm, true);
+});
 test('both committed scenarios have connected 30-node networks, expected populations and block exits that are real engine junctions',()=>{
   for(const id of ['rosebowl','downtown']){
     const scenario=validateWorld(JSON.parse(readFileSync(new URL(`../../fixtures/scenario-${id}.json`,import.meta.url),'utf8')));
