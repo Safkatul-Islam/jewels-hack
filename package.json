@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/vision-assets.mjs",
     "dev": "next dev --turbopack",
+    "vision:assets": "node scripts/vision-assets.mjs",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
@@ -13,6 +15,7 @@
   "dependencies": {
     "@base-ui/react": "^1.9.0",
     "@elevenlabs/react": "^1.22.1",
+    "@mediapipe/tasks-vision": "^1.2.3",
     "@react-three/fiber": "^9.8.2",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",

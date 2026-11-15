@@ -73,6 +73,7 @@ Built at Joe City Hack 6.0 by a team of four, in roughly six hours.
 | [docs/03-WORKPLAN.md](docs/03-WORKPLAN.md) | Who owns what, hour-by-hour plan, pre-decided cut list |
 | [docs/04-TABLE-MODE.md](docs/04-TABLE-MODE.md) | ArUco markers, calibration, 3D assets |
 | [docs/05-DECISIONS.md](docs/05-DECISIONS.md) | Why things are this way; what's unverified |
+| [docs/06-GESTURE-MODE.md](docs/06-GESTURE-MODE.md) | `/gesture` — hand tracking, the gestures, tuning. Replaces table mode. |
 
 If an instruction here conflicts with a doc, this file wins and the doc needs updating.
 
