@@ -472,7 +472,7 @@ export function GestureCanvas({ onCommit }: Props) {
             else selectPiece(null);
           }}
         >
-          <Basemap world={world} bbox={bbox} basemap={world.basemap} t={t} />
+          <Basemap bbox={bbox} basemap={world.basemap} t={t} />
           <RoadLayer network={network} roads={world.baseRoads} bbox={bbox} t={t} />
           <WorldLayer world={world} t={t} onCommit={commit} />
           <FlowLayer

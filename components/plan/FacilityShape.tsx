@@ -15,10 +15,15 @@
 import { memo } from 'react';
 import type { PieceKind } from '@/lib/sim/types';
 import { facilityFor } from '@/components/plan/facilityGeometry';
+import type { Blocker } from '@/components/plan/packing';
 
 interface Props {
   kind: PieceKind;
+  /** the REQUESTED capacity — this sizes the footprint and seeds the packing */
   capacity: number;
+  /** identifies the obstructions, so a stale layout is never served */
+  maskKey?: string;
+  blocked?: Blocker;
   /** screen pixels per world metre */
   scale: number;
   color: string;
@@ -27,11 +32,13 @@ interface Props {
 
 /** Below this many pixels across, the detail is noise — draw a glyph instead. */
 const GLYPH_BELOW_PX = 30;
-/** Below this, draw the massing and the accent but skip the repeated units. */
-const TICKS_ABOVE_PX = 58;
+/** Below this, draw the massing and the accent but skip the repeated units.
+ *  46, not 58: at the forecourt view a 70 m vendor village is 57 px and was
+ *  falling a pixel short of ever drawing the stalls that are its whole point. */
+const TICKS_ABOVE_PX = 46;
 
-function FacilityShapeImpl({ kind, capacity, scale, color, dragging }: Props) {
-  const f = facilityFor(kind, capacity);
+function FacilityShapeImpl({ kind, capacity, maskKey, blocked, scale, color, dragging }: Props) {
+  const f = facilityFor(kind, capacity, maskKey, blocked);
   const px = f.sizeM * scale;
 
   if (px < GLYPH_BELOW_PX) {

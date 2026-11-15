@@ -99,6 +99,34 @@ export function zoomAt(view: ViewState, nextK: number, focus: Vec2): ViewState {
 }
 
 /**
+ * A view that frames `spanM` metres around `target`, centred.
+ *
+ * This is how /plan opens. Fitting the whole scenario sounds like the neutral
+ * choice and is not: a 4.5 km district on a 900 px canvas puts 0.17 px on a
+ * metre, which makes a 2.6 m parking stall 0.45 px and a 3.5 m bus bay 0.6 px.
+ * Everything facilityGeometry.ts draws at true dimensions is then thrown away
+ * by the level-of-detail cutoffs, and the canvas can only ever show glyphs. At
+ * a 450 m forecourt the same stall is 4.8 px and the drawing is the point
+ * again. The whole district stays one click away on FIT.
+ */
+export function frameOn(
+  fit: Transform,
+  bbox: BBox,
+  target: Vec2,
+  spanM: number,
+): ViewState {
+  if (!fit.width || !fit.height || !fit.scale) return IDENTITY_VIEW;
+  const wanted = Math.min(fit.width, fit.height) / Math.max(spanM, 1);
+  const k = Math.min(Math.max(wanted / fit.scale, MIN_ZOOM), MAX_ZOOM);
+  const atFit = worldToScreen(fit, target, bbox);
+  return clampView(
+    { k, panX: fit.width / 2 - atFit.x * k, panY: fit.height / 2 - atFit.y * k },
+    fit.width,
+    fit.height,
+  );
+}
+
+/**
  * Keep the fitted world in contact with the viewport. At k = 1 the fit already
  * fills the frame, so pan is pinned to zero; above that, pan is bounded by how
  * much of the scaled frame hangs off each edge.
@@ -111,6 +139,22 @@ export function clampView(view: ViewState, width: number, height: number): ViewS
     panX: Math.min(0, Math.max(-slackX, view.panX)),
     panY: Math.min(0, Math.max(-slackY, view.panY)),
   };
+}
+
+/**
+ * The same mapping as `worldToScreen`, expressed as an SVG transform, so a
+ * group of geometry can be emitted in world metres and handed to the browser
+ * untouched instead of being converted point by point.
+ *
+ *   worldToScreen is  x' = (x - minX)*s + tx,  y' = (maxY - y)*s + ty
+ *   which is exactly  translate(tx - s*minX, ty + s*maxY) * scale(s, -s)
+ *
+ * The negative y scale is what flips world-north to screen-up. It flips
+ * strokes too, so anything stroked inside such a group wants
+ * vector-effect="non-scaling-stroke".
+ */
+export function worldTransformString(t: Transform, bbox: BBox): string {
+  return `translate(${t.tx - t.scale * bbox.minX} ${t.ty + t.scale * bbox.maxY}) scale(${t.scale} ${-t.scale})`;
 }
 
 export function worldToScreen(t: Transform, p: Vec2, bbox: BBox): Vec2 {

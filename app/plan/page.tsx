@@ -21,7 +21,7 @@
 // themselves, and NONE of those files had to be touched. `.console` then adds
 // the night tokens on top, for this page's own chrome only.
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ConversationProvider } from '@elevenlabs/react';
 import { AccentProvider } from '@/components/home/AccentProvider';
@@ -33,9 +33,12 @@ import { PiecePalette } from '@/components/plan/PiecePalette';
 import { PlanCanvas } from '@/components/plan/PlanCanvas';
 import { PlaybackBar } from '@/components/plan/PlaybackBar';
 import { ScenarioPicker } from '@/components/plan/ScenarioPicker';
-import { buildNetwork } from '@/lib/sim/network';
+import { buildNetwork, shortestPathsFrom } from '@/lib/sim/network';
 import { simulate } from '@/lib/sim/simulate';
+import type { RoadNetwork, SimResult } from '@/lib/sim/types';
 import { usePlanStore } from '@/lib/store';
+import { buildFacility } from '@/components/plan/facilityGeometry';
+import { makeBlocker } from '@/components/plan/packing';
 
 export default function PlanPage() {
   const world = usePlanStore((s) => s.world);
@@ -62,15 +65,116 @@ export default function PlanPage() {
    * pre-drop one at this point. Reading it here is what makes the number change
    * on the drop that caused it rather than one drop late.
    */
+  // The no-piece baseline, kept across drops. It depends on the scenario and on
+  // anything draggable that is NOT a piece — a shop moved by hand changes the
+  // baseline it should be judged against — but never on the plan itself, so
+  // recomputing it per drop was simply running the simulation twice.
+  const baselineCache = useRef<{ key: string; result: SimResult; net: RoadNetwork } | null>(null);
+
   const runPlan = useCallback(() => {
     const store = usePlanStore.getState();
-    const current = store.world;
+    let current = store.world;
     if (!current) return;
+
+    // ---- pack the site, THEN simulate what fitted ----
+    //
+    // For the kinds measured in area, capacity is an output, not an input. The
+    // stalls are laid into whatever ground is free once the venue, the roads
+    // and the neighbouring facilities have taken theirs (packing.ts), and the
+    // count that comes back replaces Piece.capacity — which is the number
+    // simulate() reads. Push a vendor village into a park-and-ride and the lot
+    // loses spaces, which loses transit share, which moves the egress median
+    // and the plan score.
+    //
+    // The footprint is sized from what was REQUESTED, not from what fitted:
+    // the land is taken either way, and deriving it from the fitted count
+    // would shrink the lot, which would change the packing, which would shrink
+    // it again.
+    const PACKED_KINDS = new Set(['park_and_ride', 'vendor_village', 'bike_valet']);
+    if (current.pieces.some((p) => PACKED_KINDS.has(p.kind))) {
+      const fitted = new Map<string, number>();
+      for (const piece of current.pieces) {
+        if (!PACKED_KINDS.has(piece.kind)) continue;
+        const asked = store.requested[piece.id] ?? piece.capacity;
+        const atRequestedSize = { ...piece, capacity: asked };
+        const drawing = buildFacility(
+          piece.kind,
+          asked,
+          makeBlocker(current, atRequestedSize),
+        );
+        // Capped at the request. True stall dimensions pack a little tighter
+        // than the area-per-space the footprint was sized with, so clear
+        // ground would otherwise hand back MORE than was asked for — which
+        // reads as a bug, not a feature. The direction that matters is down.
+        fitted.set(piece.id, Math.min(drawing.drawnUnits, asked));
+      }
+      for (const [id, capacity] of fitted) store.setFittedCapacity(id, capacity);
+      current = usePlanStore.getState().world ?? current;
+    }
+
     const net = buildNetwork(current);
     // The network is kept, not just consumed: RoadLayer draws it, so the roads
     // the user sees are the regenerated ones rather than the scenario's seeds.
     store.setNetwork(net);
     store.setResult(simulate(current, net));
+
+    // Which streets this plan costs, as opposed to how many. The engine scores
+    // livability off `residentsBlockedPct`, a single number for the whole
+    // world; the canvas has to point at the houses. Same comparison the engine
+    // makes internally (simulate.ts) — drive time from each block's access
+    // nodes to the primary anchor, now versus a plan with nothing placed.
+    //
+    // Two Dijkstras, not two per block: roads are two-way, so one pass out
+    // from the anchor gives the time from every node to it.
+    // The same world with nothing placed. Everything the canvas says about
+    // "what your plan did" is measured against this, not against the shops'
+    // ordinary trading day: perBusiness.deltaPct compares with the latter and
+    // runs to five figures on a corridor during an egress, which answers a
+    // question nobody asked. The planner's question is what the PIECES did.
+    const baseKey =
+      current.scenario.id +
+      '|' +
+      current.businesses.map((b) => `${b.id}:${b.pos.x},${b.pos.y}`).join(';') +
+      '|' +
+      current.blocks.length;
+
+    if (baselineCache.current?.key !== baseKey) {
+      const baseWorld = { ...current, pieces: [] };
+      const net0 = buildNetwork(baseWorld);
+      baselineCache.current = { key: baseKey, result: simulate(baseWorld, net0), net: net0 };
+    }
+    const baseNet = baselineCache.current.net;
+    store.setBaseline(current.pieces.length === 0 ? null : baselineCache.current.result);
+
+    const anchor = current.anchors[0];
+    if (anchor) {
+      const destNow = net.anchorNodeIds[anchor.id];
+      const destBase = baseNet.anchorNodeIds[anchor.id];
+      const now = destNow ? shortestPathsFrom(net, destNow, 'drive') : null;
+      const before = destBase ? shortestPathsFrom(baseNet, destBase, 'drive') : null;
+
+      const delay: Record<string, number> = {};
+      if (now && before) {
+        for (const block of current.blocks) {
+          let bestNow = Infinity;
+          let bestBefore = Infinity;
+          for (const id of block.accessNodeIds) {
+            const a = now.minutes[id];
+            if (a !== undefined && a < bestNow) bestNow = a;
+            const b = before.minutes[id];
+            if (b !== undefined && b < bestBefore) bestBefore = b;
+          }
+          // Cut off entirely is the worst case there is, so it saturates
+          // rather than falling through as "no change".
+          delay[block.id] = !Number.isFinite(bestBefore)
+            ? 0
+            : !Number.isFinite(bestNow)
+              ? 999
+              : Math.max(0, bestNow - bestBefore);
+        }
+      }
+      store.setBlockDelay(delay);
+    }
   }, []);
 
   // First run for a freshly loaded scenario, so the readout has numbers before

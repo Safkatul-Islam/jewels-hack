@@ -1,0 +1,634 @@
+{
+ "version": 1,
+ "scenario": {
+  "id": "forecourt",
+  "name": "Venue forecourt — illustrative",
+  "event": "Major stadium event — planning sandbox",
+  "blurb": "One street in front of the venue, with the event kit already on it. Demand, revenue and geography are invented for demonstration and describe no real place."
+ },
+ "bbox": {
+  "minX": -340,
+  "minY": -240,
+  "maxX": 540,
+  "maxY": 950
+ },
+ "basemap": {
+  "kind": "grid",
+  "spacingM": 100
+ },
+ "venue": {
+  "pos": {
+   "x": 0,
+   "y": 0
+  },
+  "name": "Forecourt Stadium — illustrative",
+  "capacity": 88000,
+  "locked": true
+ },
+ "anchors": [
+  {
+   "id": "primary",
+   "name": "Transit interchange",
+   "pos": {
+    "x": 0,
+    "y": 880
+   },
+   "mode": "rail",
+   "capacityPerHour": 42000,
+   "arrivalShare": 0.64,
+   "locked": true
+  },
+  {
+   "id": "lot",
+   "name": "Taxi & park-and-ride",
+   "pos": {
+    "x": 470,
+    "y": 560
+   },
+   "mode": "parking",
+   "capacityPerHour": 24000,
+   "arrivalShare": 0.36,
+   "locked": true
+  }
+ ],
+ "baseRoads": [
+  {
+   "id": "r0",
+   "path": [
+    {
+     "x": 0,
+     "y": 108
+    },
+    {
+     "x": 0,
+     "y": 150
+    },
+    {
+     "x": 0,
+     "y": 300
+    },
+    {
+     "x": 0,
+     "y": 520
+    },
+    {
+     "x": 0,
+     "y": 740
+    },
+    {
+     "x": 0,
+     "y": 880
+    }
+   ],
+   "class": "arterial"
+  },
+  {
+   "id": "r1",
+   "path": [
+    {
+     "x": -150,
+     "y": 150
+    },
+    {
+     "x": -80,
+     "y": 120
+    },
+    {
+     "x": 0,
+     "y": 108
+    },
+    {
+     "x": 80,
+     "y": 120
+    },
+    {
+     "x": 150,
+     "y": 150
+    }
+   ],
+   "class": "collector"
+  },
+  {
+   "id": "r2",
+   "path": [
+    {
+     "x": -270,
+     "y": 300
+    },
+    {
+     "x": 0,
+     "y": 300
+    },
+    {
+     "x": 270,
+     "y": 300
+    }
+   ],
+   "class": "collector"
+  },
+  {
+   "id": "r3",
+   "path": [
+    {
+     "x": -270,
+     "y": 520
+    },
+    {
+     "x": 0,
+     "y": 520
+    },
+    {
+     "x": 270,
+     "y": 520
+    }
+   ],
+   "class": "collector"
+  },
+  {
+   "id": "r4",
+   "path": [
+    {
+     "x": -270,
+     "y": 740
+    },
+    {
+     "x": 0,
+     "y": 740
+    },
+    {
+     "x": 270,
+     "y": 740
+    }
+   ],
+   "class": "collector"
+  },
+  {
+   "id": "r5",
+   "path": [
+    {
+     "x": -270,
+     "y": 300
+    },
+    {
+     "x": -270,
+     "y": 520
+    },
+    {
+     "x": -270,
+     "y": 740
+    }
+   ],
+   "class": "local"
+  },
+  {
+   "id": "r6",
+   "path": [
+    {
+     "x": 270,
+     "y": 300
+    },
+    {
+     "x": 270,
+     "y": 520
+    },
+    {
+     "x": 270,
+     "y": 740
+    }
+   ],
+   "class": "local"
+  },
+  {
+   "id": "r7",
+   "path": [
+    {
+     "x": 0,
+     "y": 740
+    },
+    {
+     "x": 240,
+     "y": 700
+    },
+    {
+     "x": 470,
+     "y": 640
+    },
+    {
+     "x": 470,
+     "y": 560
+    }
+   ],
+   "class": "arterial"
+  }
+ ],
+ "pieces": [
+  {
+   "id": "gate-1",
+   "kind": "security_gate",
+   "pos": {
+    "x": 0,
+    "y": 178
+   },
+   "rotation": 0,
+   "capacity": 9000
+  },
+  {
+   "id": "corridor-1",
+   "kind": "ped_corridor",
+   "pos": {
+    "x": 0,
+    "y": 420
+   },
+   "rotation": 0,
+   "capacity": 1800
+  },
+  {
+   "id": "vendors-1",
+   "kind": "vendor_village",
+   "pos": {
+    "x": -150,
+    "y": 370
+   },
+   "rotation": 0,
+   "capacity": 40
+  },
+  {
+   "id": "bike-1",
+   "kind": "bike_valet",
+   "pos": {
+    "x": 160,
+    "y": 250
+   },
+   "rotation": 0,
+   "capacity": 800
+  },
+  {
+   "id": "hub-1",
+   "kind": "shuttle_hub",
+   "pos": {
+    "x": 150,
+    "y": 640
+   },
+   "rotation": 0,
+   "capacity": 6000
+  },
+  {
+   "id": "lot-1",
+   "kind": "park_and_ride",
+   "pos": {
+    "x": 470,
+    "y": 480
+   },
+   "rotation": 0,
+   "capacity": 1200
+  }
+ ],
+ "businesses": [
+  {
+   "id": "business-1",
+   "name": "Cafe 1",
+   "pos": {
+    "x": -62,
+    "y": 215
+   },
+   "category": "food",
+   "baselineDailyRevenue": 578,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-2",
+   "name": "Cafe 2",
+   "pos": {
+    "x": -62,
+    "y": 389
+   },
+   "category": "food",
+   "baselineDailyRevenue": 400,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-3",
+   "name": "Cafe 3",
+   "pos": {
+    "x": -62,
+    "y": 447
+   },
+   "category": "food",
+   "baselineDailyRevenue": 599,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-4",
+   "name": "Shop 4",
+   "pos": {
+    "x": -62,
+    "y": 563
+   },
+   "category": "retail",
+   "baselineDailyRevenue": 608,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-5",
+   "name": "Shop 5",
+   "pos": {
+    "x": -62,
+    "y": 621
+   },
+   "category": "retail",
+   "baselineDailyRevenue": 897,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-6",
+   "name": "Service 6",
+   "pos": {
+    "x": -62,
+    "y": 679
+   },
+   "category": "service",
+   "baselineDailyRevenue": 533,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-7",
+   "name": "Cafe 7",
+   "pos": {
+    "x": -62,
+    "y": 795
+   },
+   "category": "food",
+   "baselineDailyRevenue": 643,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-8",
+   "name": "Cafe 8",
+   "pos": {
+    "x": 62,
+    "y": 215
+   },
+   "category": "food",
+   "baselineDailyRevenue": 464,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-9",
+   "name": "Cafe 9",
+   "pos": {
+    "x": 62,
+    "y": 389
+   },
+   "category": "food",
+   "baselineDailyRevenue": 664,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-10",
+   "name": "Shop 10",
+   "pos": {
+    "x": 62,
+    "y": 447
+   },
+   "category": "retail",
+   "baselineDailyRevenue": 702,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-11",
+   "name": "Shop 11",
+   "pos": {
+    "x": 62,
+    "y": 563
+   },
+   "category": "retail",
+   "baselineDailyRevenue": 991,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-12",
+   "name": "Service 12",
+   "pos": {
+    "x": 62,
+    "y": 621
+   },
+   "category": "service",
+   "baselineDailyRevenue": 611,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-13",
+   "name": "Cafe 13",
+   "pos": {
+    "x": 62,
+    "y": 679
+   },
+   "category": "food",
+   "baselineDailyRevenue": 707,
+   "catchmentM": 80
+  },
+  {
+   "id": "business-14",
+   "name": "Cafe 14",
+   "pos": {
+    "x": 62,
+    "y": 795
+   },
+   "category": "food",
+   "baselineDailyRevenue": 529,
+   "catchmentM": 80
+  }
+ ],
+ "blocks": [
+  {
+   "id": "block-1",
+   "polygon": [
+    {
+     "x": -110,
+     "y": 314
+    },
+    {
+     "x": -270,
+     "y": 314
+    },
+    {
+     "x": -270,
+     "y": 506
+    },
+    {
+     "x": -110,
+     "y": 506
+    }
+   ],
+   "population": 277,
+   "accessNodeIds": [
+    "n_-270_300",
+    "n_-270_520",
+    "n_0_300",
+    "n_0_520"
+   ]
+  },
+  {
+   "id": "block-2",
+   "polygon": [
+    {
+     "x": -110,
+     "y": 534
+    },
+    {
+     "x": -270,
+     "y": 534
+    },
+    {
+     "x": -270,
+     "y": 726
+    },
+    {
+     "x": -110,
+     "y": 726
+    }
+   ],
+   "population": 374,
+   "accessNodeIds": [
+    "n_-270_520",
+    "n_-270_740",
+    "n_0_520",
+    "n_0_740"
+   ]
+  },
+  {
+   "id": "block-3",
+   "polygon": [
+    {
+     "x": 110,
+     "y": 314
+    },
+    {
+     "x": 270,
+     "y": 314
+    },
+    {
+     "x": 270,
+     "y": 506
+    },
+    {
+     "x": 110,
+     "y": 506
+    }
+   ],
+   "population": 231,
+   "accessNodeIds": [
+    "n_270_300",
+    "n_270_520",
+    "n_0_300",
+    "n_0_520"
+   ]
+  },
+  {
+   "id": "block-4",
+   "polygon": [
+    {
+     "x": 110,
+     "y": 534
+    },
+    {
+     "x": 270,
+     "y": 534
+    },
+    {
+     "x": 270,
+     "y": 726
+    },
+    {
+     "x": 110,
+     "y": 726
+    }
+   ],
+   "population": 328,
+   "accessNodeIds": [
+    "n_270_520",
+    "n_270_740",
+    "n_0_520",
+    "n_0_740"
+   ]
+  }
+ ],
+ "personas": [
+  {
+   "id": "resident-1",
+   "name": "Maya",
+   "role": "Lives on the street behind the shops",
+   "kind": "resident",
+   "pos": {
+    "x": -190,
+    "y": 410
+   }
+  },
+  {
+   "id": "resident-2",
+   "name": "Theo",
+   "role": "Driveway opens onto the corridor",
+   "kind": "resident",
+   "pos": {
+    "x": 190,
+    "y": 630
+   }
+  },
+  {
+   "id": "spectator-1",
+   "name": "Priya",
+   "role": "Arrives by rail",
+   "kind": "spectator",
+   "pos": {
+    "x": 0,
+    "y": 880
+   }
+  },
+  {
+   "id": "spectator-2",
+   "name": "Dan",
+   "role": "Drove and parked",
+   "kind": "spectator",
+   "pos": {
+    "x": 470,
+    "y": 560
+   }
+  },
+  {
+   "id": "business-1",
+   "name": "Rosa",
+   "role": "Runs a cafe on the street",
+   "kind": "business",
+   "pos": {
+    "x": -62,
+    "y": 447
+   }
+  },
+  {
+   "id": "business-2",
+   "name": "Ken",
+   "role": "Runs a shop by the junction",
+   "kind": "business",
+   "pos": {
+    "x": 62,
+    "y": 447
+   }
+  }
+ ],
+ "params": {
+  "spectators": 88000,
+  "sampleAgents": 2000,
+  "residentTrips": 4200,
+  "arrivalWindowMin": 180,
+  "egressWindowMin": 60,
+  "seed": 42,
+  "ticksPerMin": 1,
+  "conversionRate": 0.08,
+  "avgTicket": {
+   "food": 14,
+   "retail": 22,
+   "service": 18
+  },
+  "exclusionRadiusM": 150
+ }
+}

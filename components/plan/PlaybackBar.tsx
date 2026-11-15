@@ -55,7 +55,6 @@ export function PlaybackBar() {
   const playMinute = usePlanStore((s) => s.playMinute);
   const playing = usePlanStore((s) => s.playing);
   const setPlayMinute = usePlanStore((s) => s.setPlayMinute);
-  const setPlaying = usePlanStore((s) => s.setPlaying);
 
   const trackRef = useRef<HTMLDivElement>(null);
   const scrubbing = useRef(false);
@@ -75,12 +74,9 @@ export function PlaybackBar() {
       const s = usePlanStore.getState();
       const at = s.playMinute ?? first;
       const next = at + step;
-      if (next >= last) {
-        s.setPlayMinute(last);
-        s.setPlaying(false);
-      } else {
-        s.setPlayMinute(next);
-      }
+      // Loops. The egress is the page's resting state — it should be running
+      // whenever you are looking at it, not waiting to be started.
+      s.setPlayMinute(next >= last ? first : next);
     }, TICK_MS);
     return () => window.clearInterval(id);
   }, [playing, timeline.length, span, first, last]);
@@ -108,7 +104,6 @@ export function PlaybackBar() {
     ...timeline.map((f) => f.inside + f.onFoot + f.onShuttle + f.inCar),
     1,
   );
-  const atEnd = playMinute !== null && playMinute >= last - 1e-6;
 
   // The resting state of this bar is the PEAK minute, not the last one. An
   // egress timeline ends with everyone home, so defaulting to `last` shows four
@@ -163,31 +158,6 @@ export function PlaybackBar() {
 
   return (
     <div className="flex h-[58px] shrink-0 items-center gap-3 rounded-[2px] border border-[var(--night-hairline)] bg-[var(--ink)] px-3">
-      <button
-        type="button"
-        aria-label={playing ? 'Pause the run' : 'Play the run'}
-        onClick={() => {
-          if (playing) {
-            setPlaying(false);
-            return;
-          }
-          // Starting from the end means replaying, not sitting still.
-          if (playMinute === null || atEnd) setPlayMinute(first);
-          setPlaying(true);
-        }}
-        className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--bone)] text-[var(--ink)] transition-opacity hover:opacity-85"
-      >
-        {playing ? (
-          <svg viewBox="0 0 10 10" className="size-3 fill-current">
-            <rect x={1} y={0.5} width={2.75} height={9} rx={0.6} />
-            <rect x={6.25} y={0.5} width={2.75} height={9} rx={0.6} />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 10 10" className="size-3 fill-current">
-            <path d="M1.5 0.6 9 5 1.5 9.4Z" />
-          </svg>
-        )}
-      </button>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div
@@ -202,7 +172,6 @@ export function PlaybackBar() {
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             scrubbing.current = true;
-            setPlaying(false);
             seekFromPointer(e.clientX);
           }}
           onPointerMove={(e) => {
@@ -238,7 +207,6 @@ export function PlaybackBar() {
         <div className="flex items-center gap-3 overflow-hidden font-mono text-[10px] tracking-[0.12em] text-[var(--night-dim)] uppercase tabular-nums">
           <span className="shrink-0 font-medium text-[var(--bone)]">
             {Math.round(shown)} min
-            {playMinute === null && <span className="ml-1 opacity-60">peak</span>}
           </span>
           {BANDS.map((b) => (
             <span key={b.key} className="flex shrink-0 items-center gap-1">
