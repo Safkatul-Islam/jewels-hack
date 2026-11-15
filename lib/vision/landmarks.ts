@@ -24,7 +24,7 @@ export interface Landmark {
  * §depth: MediaPipe's z is relative to the hand's own centre and noisy enough
  * that nothing in this feature is allowed to depend on it. Pinch is the clutch
  * instead. If you are tempted to use z for "push to select", read
- * docs/08-GESTURE-MODE.md first.
+ * docs/10-GESTURE-MODE.md first.
  */
 
 // The indices we use, named. Full map in the MediaPipe hand landmark docs.
